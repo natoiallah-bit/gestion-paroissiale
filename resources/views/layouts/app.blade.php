@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'Accueil') — {{ $boutiqueNom }}</title>
+    <title>@yield('title', 'Accueil') — {{ $vicariatNom }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root{
@@ -115,35 +115,43 @@
 @endphp
 <div class="barre-mobile">
     <button type="button" onclick="document.querySelector('.sidebar').classList.toggle('ouvert')" aria-label="Menu">☰</button>
-    <b>{{ $boutiqueNom }}</b>
+    <b>{{ $vicariatNom }}</b>
 </div>
 <div class="app">
     <nav class="sidebar" onclick="if(event.target===this) this.classList.remove('ouvert')">
         <div class="marque">
-            <div class="nom">{{ $boutiqueNom }}</div>
+            <div class="nom">{{ $vicariatNom }}</div>
             <div class="sous">Gestion paroissiale</div>
         </div>
 
-        @if($u->estGerant())
-            {!! $lien('dashboard', 'Tableau de bord') !!}
+        {!! $lien('dashboard', 'Tableau de bord') !!}
+
+        @php
+            $entree = function ($cle, $texte = null) use ($u, $lien) {
+                return \App\Support\Ressources::peutLire($u, $cle) ? $lien("$cle.index", $texte ?? \App\Support\Ressources::get($cle)['libelle'], "$cle.*") : '';
+            };
+        @endphp
+        @if(\App\Support\Ressources::peutLire($u, 'fideles'))
+            <div class="menu-label">Communauté</div>
+            {!! $entree('fideles') !!}
+            {!! $entree('cebs') !!}
+            {!! $entree('mouvements', 'Mouvements & services') !!}
+            {!! $entree('sacrements') !!}
         @endif
-        {!! $lien('caisse.index', 'Caisse', 'caisse.*') !!}
-        {!! $lien('ventes.index', 'Ventes', 'ventes.*') !!}
-        {!! $lien('clients.index', 'Clients & crédits', 'clients.*') !!}
 
-        @if($u->estGerant())
-            <div class="menu-label">Stock</div>
-            {!! $lien('produits.index', 'Produits', 'produits.*') !!}
-            {!! $lien('stock.entree', 'Entrée de marchandise') !!}
-            {!! $lien('stock.mouvements', 'Mouvements de stock') !!}
-            {!! $lien('categories.index', 'Catégories') !!}
-            {!! $lien('fournisseurs.index', 'Fournisseurs', 'fournisseurs.*') !!}
+        <div class="menu-label">Vie vicariale</div>
+        {!! $entree('annonces') !!}
+        {!! $entree('activites', 'Programme') !!}
 
+        @if(\App\Support\Ressources::peutLire($u, 'operations'))
             <div class="menu-label">Finances</div>
-            {!! $lien('depenses.index', 'Dépenses') !!}
-            {!! $lien('rapports.index', 'Rapports') !!}
+            {!! $entree('operations', 'Quêtes & dépenses') !!}
+        @endif
+        {!! $lien('rapports.index', 'Rapports') !!}
 
+        @if($u->estAdmin())
             <div class="menu-label">Administration</div>
+            {!! $entree('paroisses') !!}
             {!! $lien('users.index', 'Utilisateurs', 'users.*') !!}
             {!! $lien('appareils.index', 'Appareils') !!}
             {!! $lien('parametres.edit', 'Paramètres') !!}

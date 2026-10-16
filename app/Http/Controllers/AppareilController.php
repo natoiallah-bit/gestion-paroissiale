@@ -10,7 +10,7 @@ class AppareilController extends Controller
 {
     public function index()
     {
-        $appareils = Appareil::with('user')->withCount('ventes')->orderByDesc('derniere_synchro')->get();
+        $appareils = Appareil::with('user')->orderByDesc('derniere_synchro')->get();
         $connectes = PersonalAccessToken::where('name', 'like', 'appareil:%')->pluck('name')
             ->map(fn ($n) => substr($n, strlen('appareil:')))->flip();
 

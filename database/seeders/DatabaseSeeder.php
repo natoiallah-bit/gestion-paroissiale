@@ -2,30 +2,30 @@
 
 namespace Database\Seeders;
 
-use App\Models\Boutique;
 use App\Models\User;
+use App\Models\Vicariat;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Installation : crée le compte gérant et la fiche boutique.
-     * Identifiants modifiables via GERANT_EMAIL / GERANT_PASSWORD dans .env.
+     * Installation : crée la fiche du vicariat et le compte administrateur.
+     * Identifiants modifiables via ADMIN_EMAIL / ADMIN_PASSWORD dans .env.
      */
     public function run(): void
     {
-        Boutique::courante();
+        Vicariat::courant();
 
-        $email = env('GERANT_EMAIL', 'gerant@boutique.local');
+        $email = env('ADMIN_EMAIL', 'admin@paroisse.local');
         if (! User::where('email', $email)->exists()) {
             User::create([
-                'name' => 'Gérant',
+                'name' => 'Administrateur',
                 'email' => $email,
-                'password' => env('GERANT_PASSWORD', 'changer-ce-mot-de-passe'),
-                'role' => 'gerant',
+                'password' => env('ADMIN_PASSWORD', 'changer-ce-mot-de-passe'),
+                'role' => 'admin',
                 'actif' => true,
             ]);
-            $this->command?->warn("Compte gérant créé : {$email} — changez le mot de passe après la première connexion.");
+            $this->command?->warn("Compte administrateur créé : {$email} — changez le mot de passe après la première connexion.");
         }
     }
 }

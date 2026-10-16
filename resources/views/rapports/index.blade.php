@@ -2,78 +2,78 @@
 @section('title', 'Rapports')
 
 @section('content')
-<div class="entete">
-    <h1>Rapport du {{ $du->format('d/m/Y') }} au {{ $au->format('d/m/Y') }}</h1>
-    <button type="button" class="btn btn-leger pas-imprimer" onclick="window.print()">Imprimer</button>
-</div>
+<div class="entete pas-imprimer"><h1>Rapports</h1><button class="btn btn-leger" onclick="window.print()">Imprimer</button></div>
 
 <form class="filtres pas-imprimer" method="GET">
-    <div><label for="du">Du</label><input type="date" id="du" name="du" value="{{ $du->toDateString() }}"></div>
-    <div><label for="au">Au</label><input type="date" id="au" name="au" value="{{ $au->toDateString() }}"></div>
+    @if($paroisses->isNotEmpty())
+        <div><label for="paroisse">Paroisse</label>
+            <select id="paroisse" name="paroisse"><option value="">Tout le vicariat</option>
+                @foreach($paroisses as $p)<option value="{{ $p->id }}" @selected((int) $paroisseId === $p->id)>{{ $p->nom }}</option>@endforeach
+            </select></div>
+    @endif
+    <div><label for="du">Finances du</label><input type="date" id="du" name="du" value="{{ $du->toDateString() }}"></div>
+    <div><label for="au">au</label><input type="date" id="au" name="au" value="{{ $au->toDateString() }}"></div>
+    <div><label for="annee">Sacrements de l'année</label><input type="number" id="annee" name="annee" value="{{ $annee }}" min="1900" max="2200"></div>
     <button class="btn">Afficher</button>
-    <a class="btn btn-leger" href="{{ route('rapports.index', ['du' => today()->toDateString(), 'au' => today()->toDateString()]) }}">Aujourd'hui</a>
-    <a class="btn btn-leger" href="{{ route('rapports.index', ['du' => today()->startOfMonth()->toDateString(), 'au' => today()->toDateString()]) }}">Ce mois</a>
-    <a class="btn btn-leger" href="{{ route('rapports.index', ['du' => today()->subMonthNoOverflow()->startOfMonth()->toDateString(), 'au' => today()->subMonthNoOverflow()->endOfMonth()->toDateString()]) }}">Mois dernier</a>
 </form>
 
-<div class="deux-col">
-    <div class="carte">
-        <h2>Résultat</h2>
-        <table>
-            <tr><td>Chiffre d'affaires ({{ $bilan['nb_ventes'] }} ventes)</td><td class="n"><b>{{ fcfa($bilan['chiffre_affaires']) }}</b></td></tr>
-            <tr><td>− Coût d'achat des articles vendus</td><td class="n">{{ fcfa($bilan['cout_achats']) }}</td></tr>
-            <tr><td><b>= Marge brute</b></td><td class="n"><b>{{ fcfa($bilan['marge']) }}</b></td></tr>
-            <tr><td>− Dépenses de fonctionnement</td><td class="n">{{ fcfa($bilan['depenses']) }}</td></tr>
-            <tr><td><b>= Bénéfice net</b></td><td class="n {{ $bilan['benefice'] >= 0 ? 'positif' : 'negatif' }}"><b>{{ fcfa($bilan['benefice']) }}</b></td></tr>
-        </table>
-        <p class="aide" style="margin-top:8px">Les achats de marchandise ({{ fcfa($bilan['achats_marchandise']) }} sur la période) ne sont pas déduits ici : leur coût est compté quand les articles sont vendus.</p>
-    </div>
-    <div class="carte">
-        <h2>Trésorerie</h2>
-        <table>
-            <tr><td>Encaissé sur les ventes</td><td class="n">{{ fcfa($bilan['encaisse'] - $bilan['remboursements']) }}</td></tr>
-            <tr><td>+ Remboursements de crédits</td><td class="n">{{ fcfa($bilan['remboursements']) }}</td></tr>
-            <tr><td><b>= Argent reçu</b></td><td class="n"><b>{{ fcfa($bilan['encaisse']) }}</b></td></tr>
-            <tr><td>Achats de marchandise payés</td><td class="n">{{ fcfa($bilan['achats_marchandise']) }}</td></tr>
-            <tr><td>Crédits accordés sur la période</td><td class="n negatif">{{ fcfa($bilan['credits_accordes']) }}</td></tr>
-        </table>
-        <h2 style="margin-top:16px">Par mode de paiement</h2>
-        <table>
-            @forelse($parMode as $m)
-                <tr><td>{{ \App\Models\Vente::MODES[$m->mode_paiement] ?? $m->mode_paiement }} ({{ $m->nb }})</td><td class="n">{{ fcfa($m->encaisse) }}</td></tr>
-            @empty
-                <tr><td class="vide">—</td></tr>
-            @endforelse
-        </table>
-    </div>
+@if($effectifs)
+<h2>Effectifs</h2>
+<div class="grille">
+    <div class="stat"><div class="lib">Fidèles actifs</div><div class="val">{{ number_format($effectifs['fideles'], 0, ',', ' ') }}</div><div class="det">{{ $effectifs['hommes'] }} hommes · {{ $effectifs['femmes'] }} femmes</div></div>
+    <div class="stat"><div class="lib">Familles</div><div class="val">{{ $effectifs['familles'] }}</div></div>
+    <div class="stat"><div class="lib">CEB</div><div class="val">{{ $effectifs['cebs'] }}</div></div>
+    <div class="stat"><div class="lib">Mouvements & services</div><div class="val">{{ $effectifs['mouvements'] }}</div><div class="det">{{ number_format($effectifs['membres_mouvements'], 0, ',', ' ') }} membres</div></div>
 </div>
+@endif
 
-<div class="deux-col">
-    <div class="carte tableau">
-        <h2>Produits les plus vendus</h2>
-        <table>
-            <thead><tr><th>Produit</th><th class="n">Qté</th><th class="n">Ventes</th><th class="n">Marge</th></tr></thead>
-            <tbody>
-            @forelse($topProduits as $p)
-                <tr><td>{{ $p->designation }}</td><td class="n">{{ $p->quantite }}</td><td class="n">{{ fcfa($p->chiffre) }}</td><td class="n">{{ fcfa($p->marge) }}</td></tr>
-            @empty
-                <tr><td colspan="4" class="vide">Aucune vente.</td></tr>
-            @endforelse
-            </tbody>
-        </table>
-    </div>
-    <div class="carte tableau">
-        <h2>Par vendeur</h2>
-        <table>
-            <thead><tr><th>Vendeur</th><th class="n">Ventes</th><th class="n">Total</th></tr></thead>
-            <tbody>
-            @forelse($parVendeur as $v)
-                <tr><td>{{ $v->user?->name }}</td><td class="n">{{ $v->nb }}</td><td class="n">{{ fcfa($v->total) }}</td></tr>
-            @empty
-                <tr><td colspan="3" class="vide">—</td></tr>
-            @endforelse
-            </tbody>
-        </table>
-    </div>
+@if($sacrements)
+<div class="carte tableau">
+    <h2>Sacrements célébrés en {{ $annee }}</h2>
+    <table>
+        <thead><tr><th>Sacrement</th><th class="n">Nombre</th></tr></thead>
+        <tbody>
+        @foreach($sacrements as $s)<tr><td>{{ $s['libelle'] }}</td><td class="n">{{ $s['n'] }}</td></tr>@endforeach
+        <tr><td><b>Total</b></td><td class="n"><b>{{ collect($sacrements)->sum('n') }}</b></td></tr>
+        </tbody>
+    </table>
 </div>
+@endif
+
+@if($finances)
+<div class="grille">
+    <div class="stat"><div class="lib">Recettes</div><div class="val positif">{{ fcfa($finances['recettes']) }}</div></div>
+    <div class="stat"><div class="lib">Dépenses</div><div class="val negatif">{{ fcfa($finances['depenses']) }}</div></div>
+    <div class="stat"><div class="lib">Solde</div><div class="val {{ $finances['solde'] >= 0 ? 'positif' : 'negatif' }}">{{ fcfa($finances['solde']) }}</div></div>
+</div>
+<div class="carte tableau">
+    <h2>Finances du {{ $du->format('d/m/Y') }} au {{ $au->format('d/m/Y') }}</h2>
+    <table>
+        <thead><tr><th>Catégorie</th><th>Sens</th><th class="n">Opérations</th><th class="n">Total</th></tr></thead>
+        <tbody>
+        @forelse($finances['par_categorie'] as $l)
+            <tr><td>{{ $l['categorie'] }}</td>
+                <td><span class="badge {{ $l['sens'] === 'recette' ? 'badge-vert' : 'badge-rouge' }}">{{ $l['sens'] === 'recette' ? 'Recette' : 'Dépense' }}</span></td>
+                <td class="n">{{ $l['n'] }}</td><td class="n">{{ fcfa($l['total']) }}</td></tr>
+        @empty
+            <tr><td colspan="4" class="vide">Aucune opération sur la période.</td></tr>
+        @endforelse
+        </tbody>
+    </table>
+</div>
+@endif
+
+@if($parParoisse)
+<div class="carte tableau">
+    <h2>Par paroisse</h2>
+    <table>
+        <thead><tr><th>Paroisse</th><th class="n">Fidèles</th><th class="n">CEB</th><th class="n">Mouvements</th><th class="n">Sacrements {{ today()->year }}</th><th class="n">Recettes {{ today()->year }}</th></tr></thead>
+        <tbody>
+        @foreach($parParoisse as $l)
+            <tr><td><b>{{ $l['paroisse']->nom }}</b></td><td class="n">{{ number_format($l['fideles'], 0, ',', ' ') }}</td><td class="n">{{ $l['cebs'] }}</td><td class="n">{{ $l['mouvements'] }}</td><td class="n">{{ $l['sacrements'] }}</td><td class="n">{{ fcfa($l['recettes']) }}</td></tr>
+        @endforeach
+        </tbody>
+    </table>
+</div>
+@endif
 @endsection

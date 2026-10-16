@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Connexion — {{ $boutiqueNom }}</title>
+    <title>Connexion — {{ $vicariatNom }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         *{box-sizing:border-box; margin:0; padding:0;}
@@ -20,8 +20,8 @@
 </head>
 <body>
     <div class="carte">
-        <h1>{{ $boutiqueNom }}</h1>
-        <div class="sous">Connexion à la gestion du commerce</div>
+        <h1>{{ $vicariatNom }}</h1>
+        <div class="sous">Gestion paroissiale et vicariale</div>
 
         @if ($errors->any())
             <div class="erreur">{{ $errors->first() }}</div>

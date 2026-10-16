@@ -23,5 +23,5 @@
         </tbody>
     </table>
 </div>
-<p class="aide">Le <b>gérant</b> a accès à tout. Le <b>vendeur</b> a accès à la caisse, à ses propres ventes et aux clients (enregistrer un remboursement).</p>
+<p class="aide">L'<b>administrateur</b> voit tout le vicariat. Le <b>secrétaire</b> gère fidèles, CEB, mouvements, sacrements, annonces et programme de sa paroisse. Le <b>trésorier</b> gère les finances de sa paroisse.</p>
 @endsection

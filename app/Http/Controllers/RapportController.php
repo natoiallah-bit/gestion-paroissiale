@@ -2,38 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Vente;
-use App\Models\VenteLigne;
-use App\Support\Bilan;
+use App\Models\Paroisse;
+use App\Support\Ressources;
+use App\Support\Statistiques;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class RapportController extends Controller
 {
     public function index(Request $request)
     {
-        $du = $request->date('du') ?? today()->startOfMonth();
-        $au = $request->date('au') ?? today();
-        if ($du->gt($au)) {
-            [$du, $au] = [$au, $du];
-        }
+        $user = $request->user();
+        $donnees = $request->validate([
+            'du' => 'nullable|date', 'au' => 'nullable|date|after_or_equal:du',
+            'paroisse' => 'nullable|integer', 'annee' => 'nullable|integer|min:1900|max:2200',
+        ]);
 
-        $bilan = Bilan::periode($du, $au);
+        $du = Carbon::parse($donnees['du'] ?? today()->startOfYear());
+        $au = Carbon::parse($donnees['au'] ?? today());
+        $annee = (int) ($donnees['annee'] ?? today()->year);
+        $paroisseId = $user->estLimiteAUneParoisse() ? $user->paroisse_id : ($donnees['paroisse'] ?? null);
 
-        $ventesPeriode = Vente::validees()->whereBetween('created_at', [$bilan['debut'], $bilan['fin']]);
-
-        $topProduits = VenteLigne::whereIn('vente_id', (clone $ventesPeriode)->select('id'))
-            ->selectRaw('produit_id, designation, SUM(quantite) as quantite, SUM(total) as chiffre, SUM(total - quantite * prix_achat_unitaire) as marge')
-            ->groupBy('produit_id', 'designation')
-            ->orderByDesc('chiffre')
-            ->limit(15)
-            ->get();
-
-        $parMode = (clone $ventesPeriode)->selectRaw('mode_paiement, COUNT(*) as nb, SUM(montant_paye) as encaisse')
-            ->groupBy('mode_paiement')->get();
-
-        $parVendeur = (clone $ventesPeriode)->with('user')->selectRaw('user_id, COUNT(*) as nb, SUM(total) as total')
-            ->groupBy('user_id')->get();
-
-        return view('rapports.index', compact('du', 'au', 'bilan', 'topProduits', 'parMode', 'parVendeur'));
+        return view('rapports.index', [
+            'du' => $du, 'au' => $au, 'annee' => $annee,
+            'paroisseId' => $paroisseId,
+            'paroisses' => $user->estLimiteAUneParoisse() ? collect() : Paroisse::orderBy('nom')->get(),
+            'finances' => Ressources::peutLire($user, 'operations') ? Statistiques::bilan($user, $du, $au, $paroisseId) : null,
+            'sacrements' => Ressources::peutLire($user, 'sacrements') ? Statistiques::sacrementsParAnnee($user, $annee, $paroisseId) : null,
+            'effectifs' => Ressources::peutLire($user, 'fideles') ? Statistiques::tableauDeBord($user, $paroisseId)['resume'] : null,
+            'parParoisse' => $user->estAdmin() && ! $paroisseId ? Statistiques::parParoisse($user) : null,
+        ]);
     }
 }

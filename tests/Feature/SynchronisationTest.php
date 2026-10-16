@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Client;
-use App\Models\Produit;
+use App\Models\Ceb;
+use App\Models\Fidele;
+use App\Models\Paroisse;
+use App\Models\Sacrement;
 use App\Models\User;
-use App\Models\Vente;
-use App\Support\Synchronisation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -15,16 +15,12 @@ class SynchronisationTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function connecter(User $user, ?string $appareil = null): array
+    private function connecter(User $user): array
     {
-        $reponse = $this->postJson('/api/connexion', [
-            'email' => $user->email,
-            'password' => 'password',
-            'appareil_uuid' => $appareil ?? (string) Str::uuid(),
-            'appareil_nom' => 'Téléphone test',
-        ])->assertOk();
-
-        return $reponse->json();
+        return $this->postJson('/api/connexion', [
+            'email' => $user->email, 'password' => 'password',
+            'appareil_uuid' => (string) Str::uuid(), 'appareil_nom' => 'Téléphone test',
+        ])->assertOk()->json();
     }
 
     private function synchro(string $jeton, int $depuis = 0, array $changements = [])
@@ -36,158 +32,124 @@ class SynchronisationTest extends TestCase
 
     public function test_connexion_refuse_un_mauvais_mot_de_passe_et_attribue_un_code_appareil(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->postJson('/api/connexion', ['email' => $user->email, 'password' => 'faux', 'appareil_uuid' => (string) Str::uuid(), 'appareil_nom' => 'x'])
             ->assertStatus(422);
 
-        $a = $this->connecter($user);
-        $b = $this->connecter($user);
-        $this->assertSame('A1', $a['appareil']['code']);
-        $this->assertSame('A2', $b['appareil']['code']);
-
+        $this->assertSame('A1', $this->connecter($user)['appareil']['code']);
+        $this->assertSame('A2', $this->connecter($user)['appareil']['code']);
         $this->withToken('jeton-invalide')->postJson('/api/synchroniser', ['depuis' => 0])->assertUnauthorized();
     }
 
-    public function test_un_appareil_recoit_le_catalogue_puis_seulement_les_changements(): void
+    public function test_envoi_hors_ligne_puis_renvoi_sans_doublon(): void
     {
-        $gerant = User::factory()->gerant()->create();
-        $produit = Produit::create(['nom' => 'Riz', 'prix_achat' => 300, 'prix_vente' => 500, 'unite' => 'kg', 'seuil_alerte' => 1, 'actif' => true]);
-        $produit->mouvementer(10, 'entree', $gerant->id);
-        $jeton = $this->connecter($gerant)['jeton'];
+        $admin = User::factory()->admin()->create();
+        $jeton = $this->connecter($admin)['jeton'];
+        [$p, $c, $f, $s] = [(string) Str::uuid(), (string) Str::uuid(), (string) Str::uuid(), (string) Str::uuid()];
 
-        $r1 = $this->synchro($jeton)->assertOk()->json();
-        $this->assertSame(10, $r1['donnees']['produits'][0]['stock']);
-
-        $r2 = $this->synchro($jeton, $r1['revision'])->json();
-        $this->assertCount(0, $r2['donnees']['produits']);
-
-        $produit->update(['prix_vente' => 550]);
-        $r3 = $this->synchro($jeton, $r2['revision'])->json();
-        $this->assertSame(550, $r3['donnees']['produits'][0]['prix_vente']);
-
-        $produit->delete();
-        $r4 = $this->synchro($jeton, $r3['revision'])->json();
-        $this->assertSame([['table_nom' => 'produits', 'uuid' => $produit->uuid]], $r4['suppressions']);
-    }
-
-    public function test_ventes_hors_ligne_de_deux_appareils_sans_doublon(): void
-    {
-        $gerant = User::factory()->gerant()->create();
-        $vendeur = User::factory()->create();
-        $produit = Produit::create(['nom' => 'Eau', 'prix_achat' => 200, 'prix_vente' => 400, 'unite' => 'pièce', 'seuil_alerte' => 1, 'actif' => true]);
-        $produit->mouvementer(3, 'entree', $gerant->id);
-
-        $tel1 = $this->connecter($vendeur);
-        $tel2 = $this->connecter($gerant);
-
-        // Le client est créé hors ligne sur le téléphone 1, en même temps que la vente à crédit
-        $clientUuid = (string) Str::uuid();
-        $vente1 = [
-            'uuid' => (string) Str::uuid(), 'numero' => 'A1-000001', 'client_uuid' => $clientUuid,
-            'montant_paye' => 400, 'mode_paiement' => 'especes', 'created_at' => now()->subHours(2)->toIso8601String(),
-            'lignes' => [['uuid' => (string) Str::uuid(), 'produit_uuid' => $produit->uuid, 'quantite' => 2, 'prix_unitaire' => 400]],
+        $changements = [
+            'paroisses' => [['uuid' => $p, 'nom' => 'Saint-Paul', 'localite' => 'Abidjan']],
+            'cebs' => [['uuid' => $c, 'paroisse_uuid' => $p, 'nom' => 'CEB Saint-Joseph']],
+            'fideles' => [['uuid' => $f, 'paroisse_uuid' => $p, 'ceb_uuid' => $c, 'nom' => 'Koné', 'prenoms' => 'Awa', 'sexe' => 'F', 'statut' => 'actif']],
+            'sacrements' => [['uuid' => $s, 'fidele_uuid' => $f, 'type' => 'bapteme', 'date_sacrement' => '2001-04-12']],
         ];
-        $changements = ['clients' => [['uuid' => $clientUuid, 'nom' => 'Awa']], 'ventes' => [$vente1]];
 
-        $r = $this->synchro($tel1['jeton'], 0, $changements)->assertOk()->json();
-        $this->assertSame([], $r['rejets']);
-        // Renvoi après une coupure : pas de doublon
-        $this->synchro($tel1['jeton'], 0, $changements)->assertOk();
-        $this->assertSame(1, Vente::count());
+        $r1 = $this->synchro($jeton, 0, $changements)->assertOk()->json();
+        $this->assertSame([], $r1['rejets']);
+        $this->assertSame([$s], $r1['acceptes']['sacrements']);
+        $this->assertSame($c, $r1['donnees']['fideles'][0]['ceb_uuid']);
+        $this->assertSame($p, $r1['donnees']['sacrements'][0]['paroisse_uuid']);
 
-        // Le téléphone 2 avait aussi vendu 2 bouteilles hors ligne : le stock passe à -1, la vente est gardée
-        $vente2 = $vente1;
-        $vente2['uuid'] = (string) Str::uuid();
-        $vente2['numero'] = 'A2-000001';
-        $vente2['client_uuid'] = null;
-        $vente2['montant_paye'] = 800;
-        $vente2['lignes'][0]['uuid'] = (string) Str::uuid();
-        $r2 = $this->synchro($tel2['jeton'], 0, ['ventes' => [$vente2]])->json();
+        // Connexion coupée avant la réponse : l'appareil renvoie tout
+        $r2 = $this->synchro($jeton, 0, $changements)->assertOk()->json();
+        $this->assertSame([], $r2['rejets']);
+        $this->assertSame(1, Paroisse::count());
+        $this->assertSame(1, Fidele::count());
+        $this->assertSame(1, Sacrement::count());
 
-        $this->assertSame(-1, $produit->fresh()->stock);
-        $this->assertSame(400, Client::where('uuid', $clientUuid)->first()->dette());
-        $this->assertSame(now()->subHours(2)->format('Y-m-d H'), Vente::where('numero', 'A1-000001')->first()->created_at->format('Y-m-d H'));
-        // Le téléphone 2 reçoit la vente du téléphone 1 et le client
-        $this->assertCount(2, $r2['donnees']['ventes']);
-        $this->assertSame('Awa', $r2['donnees']['clients'][0]['nom']);
+        // Seuls les changements récents reviennent
+        $r3 = $this->synchro($jeton, $r2['revision'])->assertOk()->json();
+        $this->assertSame([], $r3['donnees']['fideles']);
     }
 
-    public function test_le_vendeur_ne_peut_pas_modifier_les_produits_ni_les_depenses(): void
+    public function test_une_modification_ne_renvoie_que_la_fiche_modifiee_et_les_suppressions(): void
     {
-        $vendeur = User::factory()->create();
-        $jeton = $this->connecter($vendeur)['jeton'];
+        $admin = User::factory()->admin()->create();
+        $jeton = $this->connecter($admin)['jeton'];
+        $p = Paroisse::create(['nom' => 'A']);
+        $ceb = Ceb::create(['paroisse_id' => $p->id, 'nom' => 'CEB']);
+        $revision = $this->synchro($jeton)->json('revision');
 
-        $r = $this->synchro($jeton, 0, [
-            'produits' => [['uuid' => (string) Str::uuid(), 'nom' => 'Pirate', 'unite' => 'p', 'prix_achat' => 0, 'prix_vente' => 1, 'seuil_alerte' => 0, 'actif' => true]],
-            'depenses' => [['uuid' => (string) Str::uuid(), 'libelle' => 'x', 'categorie' => 'Autre', 'montant' => 5, 'date_depense' => today()->toDateString()]],
-        ])->assertOk()->json();
+        $ceb->update(['responsable' => 'Mme Yao']);
+        $r = $this->synchro($jeton, $revision)->json();
+        $this->assertCount(1, $r['donnees']['cebs']);
+        $this->assertSame('Mme Yao', $r['donnees']['cebs'][0]['responsable']);
+        $this->assertCount(0, $r['donnees']['paroisses']);
 
-        $this->assertSame(0, Produit::count());
-        $this->assertArrayNotHasKey('depenses', $r['donnees']);
+        $uuid = $ceb->uuid;
+        $ceb->delete();
+        $r = $this->synchro($jeton, $r['revision'])->json();
+        $this->assertSame([['table_nom' => 'cebs', 'uuid' => $uuid]], json_decode(json_encode($r['suppressions']), true));
     }
 
-    public function test_le_gerant_cree_produits_entrees_et_annule_hors_ligne(): void
+    public function test_elements_refuses_avec_la_raison(): void
     {
-        $gerant = User::factory()->gerant()->create();
-        $jeton = $this->connecter($gerant)['jeton'];
-        $cat = (string) Str::uuid();
-        $prod = (string) Str::uuid();
-        $venteUuid = (string) Str::uuid();
+        $admin = User::factory()->admin()->create();
+        $jeton = $this->connecter($admin)['jeton'];
+        $p = Paroisse::create(['nom' => 'A']);
+        $f = Fidele::create(['paroisse_id' => $p->id, 'nom' => 'X', 'prenoms' => 'Y', 'sexe' => 'M', 'statut' => 'actif']);
+        $ok = (string) Str::uuid();
+        $doublon = (string) Str::uuid();
 
-        $r = $this->synchro($jeton, 0, [
-            'categories' => [['uuid' => $cat, 'nom' => 'Boissons']],
-            'produits' => [['uuid' => $prod, 'nom' => 'Jus', 'categorie_uuid' => $cat, 'unite' => 'pièce', 'prix_achat' => 200, 'prix_vente' => 350, 'seuil_alerte' => 2, 'actif' => true]],
-            'mouvements' => [['uuid' => (string) Str::uuid(), 'produit_uuid' => $prod, 'type' => 'entree', 'quantite' => 12, 'prix_achat_unitaire' => 210]],
-            'ventes' => [['uuid' => $venteUuid, 'montant_paye' => 350, 'lignes' => [['produit_uuid' => $prod, 'quantite' => 1, 'prix_unitaire' => 350]]]],
-            'annulations' => [['vente_uuid' => $venteUuid, 'motif' => 'Erreur']],
-        ])->assertOk()->json();
-
-        $this->assertSame([], $r['rejets']);
-        $produit = Produit::where('uuid', $prod)->first();
-        $this->assertSame(12, $produit->stock);
-        $this->assertSame(210, $produit->prix_achat);
-        $this->assertSame('Boissons', $produit->categorie->nom);
-        $this->assertSame('annulee', Vente::parUuid($venteUuid)->statut);
-    }
-
-    public function test_un_element_invalide_est_rejete_sans_bloquer_les_autres(): void
-    {
-        $vendeur = User::factory()->create();
-        $jeton = $this->connecter($vendeur)['jeton'];
-
-        $r = $this->synchro($jeton, 0, ['clients' => [
-            ['uuid' => (string) Str::uuid(), 'nom' => ''],
-            ['uuid' => (string) Str::uuid(), 'nom' => 'Valide'],
+        $r = $this->synchro($jeton, 0, ['sacrements' => [
+            ['uuid' => $ok, 'fidele_uuid' => $f->uuid, 'type' => 'confirmation', 'date_sacrement' => '2010-01-01'],
+            ['uuid' => $doublon, 'fidele_uuid' => $f->uuid, 'type' => 'confirmation', 'date_sacrement' => '2011-01-01'],
+            ['uuid' => (string) Str::uuid(), 'fidele_uuid' => (string) Str::uuid(), 'type' => 'bapteme', 'date_sacrement' => '2011-01-01'],
+            ['uuid' => 'pas-un-uuid', 'type' => 'bapteme'],
         ]])->assertOk()->json();
 
-        $this->assertCount(1, $r['rejets']);
-        $this->assertSame(1, Client::count());
+        $this->assertSame([$ok], $r['acceptes']['sacrements']);
+        $this->assertCount(3, $r['rejets']);
+        $this->assertStringContainsString('déjà enregistré', $r['rejets'][0]['raison']);
+        $this->assertSame(1, Sacrement::count());
     }
 
-    public function test_reception_par_morceaux_sans_rien_perdre(): void
+    public function test_chaque_role_recoit_et_envoie_seulement_ce_qui_le_concerne(): void
     {
-        $gerant = User::factory()->gerant()->create();
-        for ($i = 0; $i < 7; $i++) {
-            Client::create(['nom' => "Client $i"]);
-        }
-        $jeton = $this->connecter($gerant)['jeton'];
+        $a = Paroisse::create(['nom' => 'A']);
+        $b = Paroisse::create(['nom' => 'B']);
+        Fidele::create(['paroisse_id' => $a->id, 'nom' => 'ChezA', 'prenoms' => 'x', 'sexe' => 'M', 'statut' => 'actif']);
+        Fidele::create(['paroisse_id' => $b->id, 'nom' => 'ChezB', 'prenoms' => 'x', 'sexe' => 'M', 'statut' => 'actif']);
 
-        Synchronisation::$limite = 3;
-        $recus = [];
-        $appels = 0;
-        $depuis = 0;
-        do {
-            $r = $this->synchro($jeton, $depuis)->json();
-            $appels++;
-            foreach ($r['donnees']['clients'] as $c) {
-                $recus[] = $c['nom'];
-            }
-            $depuis = $r['revision'];
-        } while ($r['encore']);
+        $secretaire = User::factory()->create(['role' => 'secretaire', 'paroisse_id' => $a->id]);
+        $r = $this->synchro($this->connecter($secretaire)['jeton'])->json();
+        $this->assertSame(['ChezA'], array_column($r['donnees']['fideles'], 'nom'));
+        $this->assertSame(['A'], array_column($r['donnees']['paroisses'], 'nom'));
+        $this->assertArrayNotHasKey('operations', $r['donnees']);
 
-        Synchronisation::$limite = 500;
-        $this->assertCount(7, array_unique($recus));
-        $this->assertCount(7, $recus);
-        $this->assertGreaterThan(2, $appels);
+        // Un fidèle envoyé pour la paroisse B est enregistré dans la paroisse A
+        $nouveau = (string) Str::uuid();
+        $r = $this->synchro($this->connecter($secretaire)['jeton'], 0, ['fideles' => [
+            ['uuid' => $nouveau, 'paroisse_uuid' => $b->uuid, 'nom' => 'Nouveau', 'prenoms' => 'x', 'sexe' => 'F', 'statut' => 'actif'],
+        ]])->json();
+        $this->assertSame([], $r['rejets']);
+        $this->assertSame($a->id, Fidele::where('uuid', $nouveau)->value('paroisse_id'));
+
+        // Le trésorier ne reçoit pas les fidèles et n'a pas le droit d'en envoyer
+        $tresorier = User::factory()->create(['role' => 'tresorier', 'paroisse_id' => $a->id]);
+        $r = $this->synchro($this->connecter($tresorier)['jeton'], 0, ['fideles' => [
+            ['uuid' => (string) Str::uuid(), 'paroisse_uuid' => $a->uuid, 'nom' => 'Non', 'prenoms' => 'x', 'sexe' => 'F', 'statut' => 'actif'],
+        ]])->json();
+        $this->assertArrayNotHasKey('fideles', $r['donnees']);
+        $this->assertCount(1, $r['rejets']);
+        $this->assertSame(3, Fidele::count());
+    }
+
+    public function test_un_compte_desactive_ne_synchronise_plus(): void
+    {
+        $user = User::factory()->admin()->create();
+        $jeton = $this->connecter($user)['jeton'];
+        $user->update(['actif' => false]);
+        $this->synchro($jeton)->assertForbidden();
     }
 }

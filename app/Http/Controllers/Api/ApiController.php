@@ -33,7 +33,7 @@ class ApiController extends Controller
 
         return response()->json([
             'jeton' => $jeton,
-            'utilisateur' => ['uuid' => $user->uuid, 'nom' => $user->name, 'email' => $user->email, 'role' => $user->role],
+            'utilisateur' => $this->profil($user, true),
             'appareil' => ['uuid' => $appareil->uuid, 'code' => $appareil->code, 'nom' => $appareil->nom],
         ]);
     }
@@ -72,8 +72,14 @@ class ApiController extends Controller
         $reception = $sync->recevoir($request->integer('depuis'));
 
         return response()->json($envoi + $reception + [
-            'utilisateur' => ['uuid' => $user->uuid, 'nom' => $user->name, 'role' => $user->role],
+            'utilisateur' => $this->profil($user),
             'heure_serveur' => now()->toIso8601String(),
         ]);
+    }
+
+    private function profil(User $user, bool $avecEmail = false): array
+    {
+        return ['uuid' => $user->uuid, 'nom' => $user->name, 'role' => $user->role, 'paroisse_uuid' => $user->paroisse?->uuid]
+            + ($avecEmail ? ['email' => $user->email] : []);
     }
 }

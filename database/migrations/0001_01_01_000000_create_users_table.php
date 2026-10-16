@@ -14,8 +14,8 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            // gerant : accès complet ; vendeur : caisse, ventes et clients
-            $table->string('role')->default('vendeur');
+            // admin : tout le vicariat ; secretaire : fidèles, CEB, sacrements, annonces ; tresorier : finances
+            $table->string('role')->default('secretaire');
             $table->boolean('actif')->default(true);
             $table->rememberToken();
             $table->timestamps();

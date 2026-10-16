@@ -18,13 +18,13 @@
         <p class="aide" style="margin-top:6px">Application Windows sur cet ordinateur : <b>http://127.0.0.1:{{ request()->getPort() }}</b>.
             Si un téléphone n'arrive pas à se connecter : même Wi-Fi, données mobiles coupées, et PHP autorisé dans le pare-feu Windows (réseaux privés).</p>
     @else
-        <p class="negatif">Cet ordinateur n'est connecté à aucun réseau : branchez-le au Wi-Fi de la boutique pour que les téléphones le trouvent.</p>
+        <p class="negatif">Cet ordinateur n'est connecté à aucun réseau : branchez-le au Wi-Fi de la paroisse pour que les téléphones le trouvent.</p>
     @endif
 </div>
 
 <div class="carte tableau">
     <table>
-        <thead><tr><th>Code</th><th>Appareil</th><th>Utilisateur</th><th>Dernière synchronisation</th><th class="n">Ventes</th><th></th></tr></thead>
+        <thead><tr><th>Code</th><th>Appareil</th><th>Utilisateur</th><th>Dernière synchronisation</th><th></th></tr></thead>
         <tbody>
         @forelse($appareils as $a)
             <tr>
@@ -35,7 +35,7 @@
                     {{ $a->derniere_synchro?->diffForHumans() ?? 'jamais' }}
                     @if($a->derniere_synchro && $a->derniere_synchro->lt(now()->subDay()))<span class="badge badge-ambre">plus d'un jour</span>@endif
                 </td>
-                <td class="n">{{ $a->ventes_count }}</td>
+                
                 <td>
                     @if($connectes->has($a->uuid))
                         <form method="POST" action="{{ route('appareils.revoquer', $a) }}" onsubmit="return confirm('Déconnecter cet appareil ? Il devra se reconnecter avec un mot de passe.')">
@@ -48,7 +48,7 @@
                 </td>
             </tr>
         @empty
-            <tr><td colspan="6" class="vide">Aucun appareil. Installez l'application sur un téléphone ou un ordinateur et connectez-vous.</td></tr>
+            <tr><td colspan="5" class="vide">Aucun appareil. Installez l'application sur un téléphone ou un ordinateur et connectez-vous.</td></tr>
         @endforelse
         </tbody>
     </table>
