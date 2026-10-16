@@ -33,7 +33,7 @@ class Synchronisation
 
     public function envoyer(array $changements): array
     {
-        // L'ordre des ressources respecte les dépendances (paroisse → CEB → fidèle → sacrement)
+        // L'ordre des ressources respecte les dépendances (secteur → CEB → fidèle → sacrement)
         foreach (Ressources::cles() as $cle) {
             if (! Ressources::peutEcrire($this->user, $cle)) {
                 foreach ($changements[$cle] ?? [] as $element) {
@@ -51,7 +51,7 @@ class Synchronisation
     public function recevoir(int $depuis): array
     {
         $sources = ['vicariat' => Vicariat::query()];
-        $sources['utilisateurs'] = $this->user->estAdmin() ? User::with('paroisse:id,uuid') : User::with('paroisse:id,uuid')->where('id', $this->user->id);
+        $sources['utilisateurs'] = $this->user->estAdmin() ? User::with('secteur:id,uuid') : User::with('secteur:id,uuid')->where('id', $this->user->id);
         foreach (Ressources::cles() as $cle) {
             if (! Ressources::peutLire($this->user, $cle)) {
                 continue;
@@ -103,7 +103,7 @@ class Synchronisation
             }
         }
         if ($cle === 'sacrements') {
-            $relations[] = 'paroisse:id,uuid';
+            $relations[] = 'secteur:id,uuid';
         }
 
         return $relations;
@@ -112,8 +112,8 @@ class Synchronisation
     private function exporter(string $cle, $l): array
     {
         return match ($cle) {
-            'vicariat' => ['uuid' => $l->uuid, 'nom' => $l->nom, 'diocese' => $l->diocese, 'adresse' => $l->adresse, 'telephone' => $l->telephone, 'pied_extrait' => $l->pied_extrait],
-            'utilisateurs' => ['uuid' => $l->uuid, 'nom' => $l->name, 'role' => $l->role, 'actif' => $l->actif, 'paroisse_uuid' => $l->paroisse?->uuid],
+            'vicariat' => ['uuid' => $l->uuid, 'nom' => $l->nom, 'archidiocese' => $l->archidiocese, 'doyenne' => $l->doyenne, 'responsable' => $l->responsable, 'adresse' => $l->adresse, 'telephone' => $l->telephone, 'pied_extrait' => $l->pied_extrait],
+            'utilisateurs' => ['uuid' => $l->uuid, 'nom' => $l->name, 'role' => $l->role, 'actif' => $l->actif, 'secteur_uuid' => $l->secteur?->uuid],
             default => Ressources::exporter($cle, $l),
         };
     }

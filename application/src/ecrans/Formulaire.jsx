@@ -31,9 +31,9 @@ export function Formulaire({ cle, uuid = null, valeurs: initiales = {} }) {
 
   const options = (c) => {
     let liste = [...cartes[c.ref].values()];
-    // CEB : seulement celles de la paroisse choisie
-    if (c.ref === 'cebs' && courant.paroisse_uuid) liste = liste.filter((x) => x.paroisse_uuid === courant.paroisse_uuid);
-    if (c.ref === 'mouvements' && courant.paroisse_uuid) liste = liste.filter((x) => !x.paroisse_uuid || x.paroisse_uuid === courant.paroisse_uuid);
+    // CEB : seulement celles du secteur choisie
+    if (c.ref === 'cebs' && courant.secteur_uuid) liste = liste.filter((x) => x.secteur_uuid === courant.secteur_uuid);
+    if (c.ref === 'mouvements' && courant.secteur_uuid) liste = liste.filter((x) => !x.secteur_uuid || x.secteur_uuid === courant.secteur_uuid);
     const mot = (filtres[c.nom] || '').toLowerCase();
     return liste.map((x) => ({ uuid: x.uuid, texte: intitule(c.ref, x, cartes) })).filter((o) => !mot || o.texte.toLowerCase().includes(mot) || o.uuid === courant[c.nom])
       .sort((a, b) => a.texte.localeCompare(b.texte, 'fr'));
@@ -57,7 +57,7 @@ export function Formulaire({ cle, uuid = null, valeurs: initiales = {} }) {
       <form class="carte formulaire" onSubmit={valider}>
         {erreur && <div class="alerte alerte-erreur">{erreur}</div>}
         {def.champs.map((c) => {
-          if (c.nom === 'paroisse_uuid' && estLimite(user)) return null;
+          if (c.nom === 'secteur_uuid' && estLimite(user)) return null;
           const id = 'champ-' + c.nom;
           const valeur = courant[c.nom] ?? '';
           const requis = !!c.requis;
@@ -77,7 +77,7 @@ export function Formulaire({ cle, uuid = null, valeurs: initiales = {} }) {
                   <>
                     {cartes[c.ref].size > 25 && <input type="search" placeholder="Rechercher dans la liste…" style="margin-bottom:6px" value={filtres[c.nom] || ''} onInput={(e) => setFiltres({ ...filtres, [c.nom]: e.target.value })} />}
                     <select id={id} value={valeur} required={requis} onChange={(e) => maj(c.nom, e.target.value)}>
-                      <option value="">{requis ? 'Choisir…' : c.nom === 'paroisse_uuid' ? 'Tout le vicariat' : '—'}</option>
+                      <option value="">{requis ? 'Choisir…' : c.nom === 'secteur_uuid' ? 'Tout le vicariat' : '—'}</option>
                       {liste.map((o) => <option key={o.uuid} value={o.uuid}>{o.texte}</option>)}
                     </select>
                   </>

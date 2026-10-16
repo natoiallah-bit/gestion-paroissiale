@@ -3,7 +3,7 @@ import { useApp } from '../App.jsx';
 import { useCartes, useRequete } from '../crochets.js';
 import { db } from '../db.js';
 import { fcfa } from '../format.js';
-import { intitule, peutEcrire, RESSOURCES, trier, valeur } from '../ressources.js';
+import { cumulsDepots, estLimite, intitule, peutEcrire, RESSOURCES, trier, valeur } from '../ressources.js';
 
 const PAGE = 60;
 
@@ -20,8 +20,11 @@ export function Liste({ cle, filtres: filtresInitiaux = {} }) {
   if (!toutes || !cartes) return null;
 
   const colonnes = def.champs.filter((c) => c.liste);
+  // Colonnes calculées (cumuls des dépôts), jamais saisies
+  const calculees = (def.calculees || []).filter((c) => !c.central || !estLimite(session.utilisateur));
+  const cumuls = cle === 'depots' ? cumulsDepots(toutes) : null;
   const champDate = def.champs.find((c) => c.type === 'date' && c.liste);
-  const filtrables = colonnes.filter((c) => c.type === 'choix' || (c.type === 'ref' && ['paroisse_uuid', 'ceb_uuid', 'fidele_uuid'].includes(c.nom)));
+  const filtrables = colonnes.filter((c) => c.type === 'choix' || (c.type === 'ref' && ['secteur_uuid', 'ceb_uuid', 'fidele_uuid'].includes(c.nom)));
   const mot = q.trim().toLowerCase();
 
   const lignes = trier(cle, toutes.filter((f) => {
@@ -69,14 +72,15 @@ export function Liste({ cle, filtres: filtresInitiaux = {} }) {
           <div class="stat"><div class="lib">Dépenses</div><div class="val negatif">{fcfa(totaux.depenses)}</div></div>
           <div class="stat"><div class="lib">Solde</div><div class={'val ' + (totaux.recettes >= totaux.depenses ? 'positif' : 'negatif')}>{fcfa(totaux.recettes - totaux.depenses)}</div></div>
         </>}
+        {cle === 'depots' && <div class="stat"><div class="lib">Total déposé</div><div class="val positif">{fcfa(lignes.reduce((s, d) => s + d.montant, 0))}</div></div>}
         {cle === 'mouvements' && <div class="stat"><div class="lib">Membres déclarés</div><div class="val">{lignes.reduce((s, m) => s + (m.nombre_membres || 0), 0)}</div></div>}
       </div>
 
       <div class="carte tableau">
         <table>
-          <thead><tr>{colonnes.map((c) => <th key={c.nom} class={c.type === 'montant' ? 'n' : ''}>{c.label}</th>)}</tr></thead>
+          <thead><tr>{colonnes.map((c) => <th key={c.nom} class={c.type === 'montant' ? 'n' : ''}>{c.label}</th>)}{calculees.map((c) => <th key={c.nom} class="n">{c.label}</th>)}</tr></thead>
           <tbody>
-            {lignes.length === 0 && <tr><td colspan={colonnes.length} class="vide">Rien à afficher.</td></tr>}
+            {lignes.length === 0 && <tr><td colspan={colonnes.length + calculees.length} class="vide">Rien à afficher.</td></tr>}
             {lignes.slice(0, max).map((f) => (
               <tr key={f.uuid} class="clic" onClick={() => naviguer('fiche', { cle, uuid: f.uuid })}>
                 {colonnes.map((c, i) => (
@@ -88,6 +92,7 @@ export function Liste({ cle, filtres: filtresInitiaux = {} }) {
                     {i === 0 && f._local && <> <span class="badge badge-ambre">à envoyer</span></>}
                   </td>
                 ))}
+                {calculees.map((c) => <td key={c.nom} class="n"><b>{fcfa(cumuls.get(f.uuid)?.[c.nom])}</b></td>)}
               </tr>
             ))}
           </tbody>

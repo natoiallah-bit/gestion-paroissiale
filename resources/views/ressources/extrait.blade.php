@@ -22,9 +22,10 @@
 @php $f = $sacrement->fidele; @endphp
 <div class="imprimer"><button onclick="window.print()">Imprimer</button></div>
 <div class="entete">
-    @if($vicariat->diocese)<div class="petit">Diocèse de {{ $vicariat->diocese }}</div>@endif
-    <div class="nom">{{ $vicariat->nom }}</div>
-    <div class="petit">Paroisse {{ $sacrement->paroisse?->nom }}@if($sacrement->paroisse?->localite) — {{ $sacrement->paroisse->localite }}@endif</div>
+    @if($vicariat->archidiocese)<div class="petit">Archidiocèse de {{ $vicariat->archidiocese }}</div>@endif
+    @if($vicariat->doyenne)<div class="petit">Doyenné de {{ $vicariat->doyenne }}</div>@endif
+    <div class="nom">Vicariat {{ $vicariat->nom }}</div>
+    <div class="petit">Secteur {{ $sacrement->secteur?->nom }}@if($f->ceb) — {{ $f->ceb->nom }}@endif</div>
 </div>
 
 <h1>Extrait du registre — {{ \App\Support\Ressources::SACREMENTS[$sacrement->type] ?? $sacrement->type }}</h1>
@@ -42,8 +43,8 @@
 </dl>
 
 <div class="pied">
-    <div>Fait à {{ $sacrement->paroisse?->localite ?? $sacrement->paroisse?->nom }}, le {{ now()->translatedFormat('d F Y') }}</div>
-    <div>Le curé{{ $sacrement->paroisse?->cure ? ' : '.$sacrement->paroisse->cure : '' }}</div>
+    <div>Fait à {{ $vicariat->nom }}, le {{ now()->translatedFormat('d F Y') }}</div>
+    <div>Le curé{{ $vicariat->responsable ? ' : '.$vicariat->responsable : '' }}</div>
 </div>
 <div class="mention">{{ $vicariat->pied_extrait ?: 'Pour copie conforme au registre.' }}</div>
 </body>

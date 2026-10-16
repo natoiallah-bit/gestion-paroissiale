@@ -33,9 +33,13 @@
                 </td>
             </tr>
         @endforeach
+        @foreach($def['calculees'] ?? [] as $c)
+            @if(! ($c['central'] ?? false) || ! auth()->user()->estLimiteAUnSecteur())<tr><th>{{ $c['label'] }}</th><td><b>{{ fcfa($fiche->{$c['nom']}) }}</b> <span class="aide">après ce dépôt</span></td></tr>@endif
+        @endforeach
+        @if($cle === 'cebs')<tr><th>Solde du compte</th><td><b>{{ fcfa(\App\Models\Operation::where('ceb_id', $fiche->id)->where('sens', 'recette')->sum('montant') - \App\Models\Operation::where('ceb_id', $fiche->id)->where('sens', 'depense')->sum('montant')) }}</b></td></tr>@endif
         @if($cle === 'fideles' && $fiche->age() !== null)<tr><th>Âge</th><td>{{ $fiche->age() }} ans</td></tr>@endif
         @if($cle === 'cebs')<tr><th>Fidèles actifs</th><td>{{ \App\Models\Fidele::where('ceb_id', $fiche->id)->where('statut', 'actif')->count() }}</td></tr>@endif
-        @if($cle === 'paroisses')<tr><th>Fidèles actifs</th><td>{{ \App\Models\Fidele::where('paroisse_id', $fiche->id)->where('statut', 'actif')->count() }}</td></tr>@endif
+        @if($cle === 'secteurs')<tr><th>Fidèles actifs</th><td>{{ \App\Models\Fidele::where('secteur_id', $fiche->id)->where('statut', 'actif')->count() }}</td></tr>@endif
     </table>
 </div>
 

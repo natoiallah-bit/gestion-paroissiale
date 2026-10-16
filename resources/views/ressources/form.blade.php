@@ -19,7 +19,7 @@
             }
             $requis = $champ['requis'] ?? false;
         @endphp
-        @if(! ($champ['nom'] === 'paroisse_uuid' && auth()->user()->estLimiteAUneParoisse()))
+        @if(! ($champ['nom'] === 'secteur_uuid' && auth()->user()->estLimiteAUnSecteur()))
         <label for="{{ $nom }}">{{ $champ['label'] }}@if($requis) *@endif</label>
         @switch($champ['type'])
             @case('long')
@@ -39,7 +39,7 @@
                            oninput="const t=this.value.toLowerCase(); for (const o of document.getElementById('{{ $nom }}').options) o.hidden = o.value && !o.text.toLowerCase().includes(t)">
                 @endif
                 <select id="{{ $nom }}" name="{{ $nom }}" @required($requis)>
-                    @unless($requis)<option value="">{{ $nom === 'paroisse_uuid' ? 'Tout le vicariat' : '—' }}</option>@endunless
+                    @unless($requis)<option value="">{{ $nom === 'secteur_uuid' ? 'Tout le vicariat' : '—' }}</option>@endunless
                     @if($requis && $valeur === null)<option value="" disabled selected>Choisir…</option>@endif
                     @foreach($liste as $o)<option value="{{ $o['uuid'] }}" @selected($valeur === $o['uuid'])>{{ $o['texte'] }}</option>@endforeach
                 </select>

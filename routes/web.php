@@ -18,7 +18,7 @@ Route::middleware(['auth', 'actif'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/rapports', [RapportController::class, 'index'])->name('rapports.index');
 
-    // Toutes les fiches (paroisses, cebs, fideles, sacrements…) : les droits sont vérifiés
+    // Toutes les fiches (secteurs, cebs, fideles, sacrements…) : les droits sont vérifiés
     // dans le contrôleur, d'après la description de App\Support\Ressources
     Route::get('/sacrements/{id}/extrait', [RessourceController::class, 'extrait'])->whereNumber('id')->name('sacrements.extrait');
     foreach (Ressources::cles() as $cle) {

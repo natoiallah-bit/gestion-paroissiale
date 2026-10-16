@@ -5,7 +5,7 @@ use App\Support\Ressources;
 use Illuminate\Support\Facades\Artisan;
 
 // Affiche l'adresse à taper dans les applications (téléphone, ordinateur)
-Artisan::command('paroisse:adresses {--port=8200}', function () {
+Artisan::command('vicariat:adresses {--port=8200}', function () {
     $port = (int) $this->option('port');
     $urls = AdresseReseau::urls($port);
 
@@ -26,7 +26,7 @@ Artisan::command('paroisse:adresses {--port=8200}', function () {
 
 // Exporte la description des fiches pour les applications (application/src/ressources.json).
 // À relancer après toute modification de App\Support\Ressources ; un test vérifie qu'elle est à jour.
-Artisan::command('paroisse:ressources {--verifier}', function () {
+Artisan::command('vicariat:ressources {--verifier}', function () {
     $json = Ressources::pourApplication();
     $fichier = base_path('application/src/ressources.json');
 

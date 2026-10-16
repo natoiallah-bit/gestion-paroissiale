@@ -42,19 +42,20 @@ return new class extends Migration
             $table->id();
             $this->synchro($table);
             $table->string('nom')->default('Vicariat');
-            $table->string('diocese')->nullable();
+            $table->string('archidiocese')->nullable();
+            $table->string('doyenne')->nullable();
+            $table->string('responsable')->nullable(); // curé / vicaire du vicariat
             $table->string('adresse')->nullable();
             $table->string('telephone')->nullable();
             $table->string('pied_extrait')->nullable();
             $table->timestamps();
         });
 
-        Schema::create('paroisses', function (Blueprint $table) {
+        Schema::create('secteurs', function (Blueprint $table) {
             $table->id();
             $this->synchro($table);
             $table->string('nom');
-            $table->string('localite')->nullable();
-            $table->string('cure')->nullable();
+            $table->string('responsable')->nullable();
             $table->string('telephone')->nullable();
             $table->string('adresse')->nullable();
             $table->timestamps();
@@ -63,7 +64,7 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             $table->uuid('uuid')->nullable()->unique(); // SQLite n'ajoute pas de colonne obligatoire sans valeur par défaut
             $table->unsignedBigInteger('revision')->default(0)->index();
-            $table->foreignId('paroisse_id')->nullable()->constrained('paroisses')->nullOnDelete();
+            $table->foreignId('secteur_id')->nullable()->constrained('secteurs')->nullOnDelete();
         });
 
         Schema::create('appareils', function (Blueprint $table) {
@@ -79,7 +80,7 @@ return new class extends Migration
         Schema::create('cebs', function (Blueprint $table) {
             $table->id();
             $this->synchro($table);
-            $table->foreignId('paroisse_id')->constrained('paroisses');
+            $table->foreignId('secteur_id')->constrained('secteurs');
             $table->string('nom');
             $table->string('quartier')->nullable();
             $table->string('responsable')->nullable();
@@ -90,9 +91,9 @@ return new class extends Migration
         Schema::create('mouvements', function (Blueprint $table) {
             $table->id();
             $this->synchro($table);
-            $table->foreignId('paroisse_id')->nullable()->constrained('paroisses');
+            $table->foreignId('secteur_id')->nullable()->constrained('secteurs');
             $table->string('nom');
-            $table->string('type')->default('mouvement'); // mouvement | service
+            $table->string('type')->default('jeunes'); // jeunes | adultes | pastorale | service
             $table->string('responsable')->nullable();
             $table->string('telephone')->nullable();
             $table->unsignedInteger('nombre_membres')->default(0);
@@ -103,7 +104,7 @@ return new class extends Migration
         Schema::create('fideles', function (Blueprint $table) {
             $table->id();
             $this->synchro($table);
-            $table->foreignId('paroisse_id')->constrained('paroisses');
+            $table->foreignId('secteur_id')->constrained('secteurs');
             $table->foreignId('ceb_id')->nullable()->constrained('cebs');
             $table->string('nom');
             $table->string('prenoms');
@@ -115,14 +116,14 @@ return new class extends Migration
             $table->string('statut')->default('actif'); // actif | decede | transfere
             $table->text('note')->nullable();
             $table->timestamps();
-            $table->index(['paroisse_id', 'statut']);
+            $table->index(['secteur_id', 'statut']);
         });
 
         Schema::create('sacrements', function (Blueprint $table) {
             $table->id();
             $this->synchro($table);
             $table->foreignId('fidele_id')->constrained('fideles');
-            $table->foreignId('paroisse_id')->constrained('paroisses'); // celle du fidèle à la date de l'enregistrement
+            $table->foreignId('secteur_id')->constrained('secteurs'); // celui du fidèle à la date de l'enregistrement
             $table->string('type'); // bapteme | eucharistie | confirmation | mariage | obseques
             $table->date('date_sacrement');
             $table->string('lieu')->nullable();
@@ -138,22 +139,38 @@ return new class extends Migration
         Schema::create('operations', function (Blueprint $table) {
             $table->id();
             $this->synchro($table);
-            $table->foreignId('paroisse_id')->constrained('paroisses');
+            $table->foreignId('secteur_id')->nullable()->constrained('secteurs'); // vide = caisse centrale du vicariat
+            $table->foreignId('ceb_id')->nullable()->constrained('cebs'); // vide = compte du secteur lui-même
             $table->foreignId('user_id')->nullable()->constrained('users');
-            $table->string('sens'); // recette | depense
+            $table->string('sens'); // recette (dépôt) | depense (retrait)
             $table->string('categorie');
             $table->string('libelle');
             $table->unsignedBigInteger('montant');
             $table->date('date_operation');
             $table->text('note')->nullable();
             $table->timestamps();
-            $table->index(['paroisse_id', 'date_operation']);
+            $table->index(['secteur_id', 'date_operation']);
+        });
+
+        // Dépôts des secteurs à la caisse centrale du vicariat (les cumuls sont calculés à l'affichage)
+        Schema::create('depots', function (Blueprint $table) {
+            $table->id();
+            $this->synchro($table);
+            $table->foreignId('secteur_id')->constrained('secteurs');
+            $table->foreignId('user_id')->nullable()->constrained('users');
+            $table->unsignedBigInteger('montant');
+            $table->date('date_depot');
+            $table->string('reference')->nullable();
+            $table->string('deposant')->nullable();
+            $table->text('note')->nullable();
+            $table->timestamps();
+            $table->index(['secteur_id', 'date_depot']);
         });
 
         Schema::create('annonces', function (Blueprint $table) {
             $table->id();
             $this->synchro($table);
-            $table->foreignId('paroisse_id')->nullable()->constrained('paroisses');
+            $table->foreignId('secteur_id')->nullable()->constrained('secteurs');
             $table->string('titre');
             $table->text('contenu');
             $table->date('date_debut');
@@ -164,7 +181,7 @@ return new class extends Migration
         Schema::create('activites', function (Blueprint $table) {
             $table->id();
             $this->synchro($table);
-            $table->foreignId('paroisse_id')->nullable()->constrained('paroisses');
+            $table->foreignId('secteur_id')->nullable()->constrained('secteurs');
             $table->foreignId('mouvement_id')->nullable()->constrained('mouvements');
             $table->string('titre');
             $table->date('date_activite')->index();
@@ -177,16 +194,16 @@ return new class extends Migration
 
     public function down(): void
     {
-        foreach (['activites', 'annonces', 'operations', 'sacrements', 'fideles', 'mouvements', 'cebs', 'appareils'] as $t) {
+        foreach (['activites', 'annonces', 'depots', 'operations', 'sacrements', 'fideles', 'mouvements', 'cebs', 'appareils'] as $t) {
             Schema::dropIfExists($t);
         }
         Schema::table('users', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('paroisse_id');
+            $table->dropConstrainedForeignId('secteur_id');
             $table->dropUnique(['uuid']);
             $table->dropIndex(['revision']);
             $table->dropColumn(['uuid', 'revision']);
         });
-        foreach (['paroisses', 'vicariat', 'suppressions', 'sync_compteur'] as $t) {
+        foreach (['secteurs', 'vicariat', 'suppressions', 'sync_compteur'] as $t) {
             Schema::dropIfExists($t);
         }
     }

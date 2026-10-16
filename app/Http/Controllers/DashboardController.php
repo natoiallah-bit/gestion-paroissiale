@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Paroisse;
+use App\Models\Secteur;
 use App\Support\Statistiques;
 use Illuminate\Http\Request;
 
@@ -11,11 +11,11 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $paroisseId = $user->estAdmin() ? $request->integer('paroisse') ?: null : null;
+        $secteurId = $user->estAdmin() ? $request->integer('secteur') ?: null : null;
 
-        return view('dashboard', Statistiques::tableauDeBord($user, $paroisseId) + [
-            'paroisseChoisie' => $paroisseId ? Paroisse::find($paroisseId) : null,
-            'listeParoisses' => $user->estAdmin() ? Paroisse::orderBy('nom')->get() : collect(),
+        return view('dashboard', Statistiques::tableauDeBord($user, $secteurId) + [
+            'secteurChoisie' => $secteurId ? Secteur::find($secteurId) : null,
+            'listeSecteurs' => $user->estAdmin() ? Secteur::orderBy('nom')->get() : collect(),
         ]);
     }
 }

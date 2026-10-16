@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Paroisse;
+use App\Models\Secteur;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -13,12 +13,12 @@ class UserController extends Controller
 {
     public function index()
     {
-        return view('users.index', ['users' => User::with('paroisse')->orderBy('name')->get()]);
+        return view('users.index', ['users' => User::with('secteur')->orderBy('name')->get()]);
     }
 
     public function create()
     {
-        return view('users.form', ['user' => new User(['role' => 'secretaire', 'actif' => true]), 'paroisses' => Paroisse::orderBy('nom')->get()]);
+        return view('users.form', ['user' => new User(['role' => 'secretaire', 'actif' => true]), 'secteurs' => Secteur::orderBy('nom')->get()]);
     }
 
     public function store(Request $request)
@@ -30,7 +30,7 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        return view('users.form', ['user' => $user, 'paroisses' => Paroisse::orderBy('nom')->get()]);
+        return view('users.form', ['user' => $user, 'secteurs' => Secteur::orderBy('nom')->get()]);
     }
 
     public function update(Request $request, User $user)
@@ -56,15 +56,16 @@ class UserController extends Controller
             'name' => 'required|string|max:120',
             'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user?->id)],
             'role' => ['required', Rule::in(array_keys(User::ROLES))],
-            'paroisse_id' => ['nullable', 'integer', 'exists:paroisses,id'],
+            'secteur_id' => ['nullable', 'integer', 'exists:secteurs,id'],
             'password' => [$user ? 'nullable' : 'required', 'confirmed', Password::min(8)],
         ]);
         $donnees['actif'] = $request->boolean('actif');
-        if ($donnees['role'] !== 'admin' && empty($donnees['paroisse_id'])) {
-            throw ValidationException::withMessages(['paroisse_id' => 'Choisissez la paroisse de ce compte (seul l\'administrateur voit tout le vicariat).']);
+        // Le secrétaire travaille dans un secteur ; le trésorier sans secteur tient la caisse centrale du vicariat
+        if ($donnees['role'] === 'secretaire' && empty($donnees['secteur_id'])) {
+            throw ValidationException::withMessages(['secteur_id' => 'Choisissez le secteur de ce secrétaire.']);
         }
         if ($donnees['role'] === 'admin') {
-            $donnees['paroisse_id'] = null;
+            $donnees['secteur_id'] = null;
         }
 
         return $donnees;

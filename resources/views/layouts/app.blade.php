@@ -151,7 +151,7 @@
 
         @if($u->estAdmin())
             <div class="menu-label">Administration</div>
-            {!! $entree('paroisses') !!}
+            {!! $entree('secteurs') !!}
             {!! $lien('users.index', 'Utilisateurs', 'users.*') !!}
             {!! $lien('appareils.index', 'Appareils') !!}
             {!! $lien('parametres.edit', 'Paramètres') !!}

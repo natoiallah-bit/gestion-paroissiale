@@ -79,7 +79,7 @@ class ApiController extends Controller
 
     private function profil(User $user, bool $avecEmail = false): array
     {
-        return ['uuid' => $user->uuid, 'nom' => $user->name, 'role' => $user->role, 'paroisse_uuid' => $user->paroisse?->uuid]
+        return ['uuid' => $user->uuid, 'nom' => $user->name, 'role' => $user->role, 'secteur_uuid' => $user->secteur?->uuid]
             + ($avecEmail ? ['email' => $user->email] : []);
     }
 }

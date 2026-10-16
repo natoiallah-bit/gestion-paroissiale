@@ -5,8 +5,8 @@ namespace App\Support;
 use App\Models\Ceb;
 use App\Models\Fiche;
 use App\Models\Fidele;
-use App\Models\Paroisse;
 use App\Models\Sacrement;
+use App\Models\Secteur;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -21,11 +21,11 @@ class Enregistreur
     // Sacrements qu'on ne reçoit qu'une fois
     private const UNIQUES = ['bapteme', 'eucharistie', 'confirmation', 'obseques'];
 
-    /** Un compte rattaché à une paroisse travaille toujours dans cette paroisse : on la complète avant de valider. */
+    /** Un compte rattaché à un secteur travaille toujours dans ce secteur : on le complète avant de valider. */
     public static function completer(string $cle, array $donnees, User $user): array
     {
-        if ($user->estLimiteAUneParoisse() && in_array(Ressources::get($cle)['portee'], ['obligatoire', 'facultative'], true)) {
-            $donnees['paroisse_uuid'] = Paroisse::find($user->paroisse_id)?->uuid;
+        if ($user->estLimiteAUnSecteur() && in_array(Ressources::get($cle)['portee'], ['obligatoire', 'facultative', 'centrale'], true)) {
+            $donnees['secteur_uuid'] = Secteur::find($user->secteur_id)?->uuid;
         }
 
         return $donnees;
@@ -39,12 +39,12 @@ class Enregistreur
             self::refuser('Votre compte n\'a pas le droit de modifier cette fiche.');
         }
         if ($existant && ! Portee::peutModifier($user, $cle, $existant)) {
-            self::refuser('Cette fiche ne fait pas partie de votre paroisse.');
+            self::refuser('Cette fiche ne fait pas partie de votre secteur.');
         }
 
-        // Un compte rattaché à une paroisse travaille toujours dans cette paroisse
-        if ($user->estLimiteAUneParoisse() && in_array($def['portee'], ['obligatoire', 'facultative'], true)) {
-            $donnees['paroisse_uuid'] = Paroisse::find($user->paroisse_id)?->uuid;
+        // Un compte rattaché à un secteur travaille toujours dans ce secteur
+        if ($user->estLimiteAUnSecteur() && in_array($def['portee'], ['obligatoire', 'facultative', 'centrale'], true)) {
+            $donnees['secteur_uuid'] = Secteur::find($user->secteur_id)?->uuid;
         }
 
         // Valeurs des champs ; les références (uuid) deviennent des identifiants
@@ -79,10 +79,13 @@ class Enregistreur
             $fiche = $existant ?? new $def['modele'](['uuid' => $donnees['uuid'] ?? null]);
             $fiche->fill($attributs);
 
-            if ($cle === 'sacrements') {
-                $fiche->paroisse_id = $references['fidele_uuid']?->paroisse_id ?? $fiche->fidele?->paroisse_id;
+            if ($cle === 'operations' && ($references['ceb_uuid'] ?? null)) {
+                $fiche->secteur_id = $references['ceb_uuid']->secteur_id;
             }
-            if ($cle === 'operations' && ! $fiche->exists) {
+            if ($cle === 'sacrements') {
+                $fiche->secteur_id = $references['fidele_uuid']?->secteur_id ?? $fiche->fidele?->secteur_id;
+            }
+            if (in_array($cle, ['operations', 'depots'], true) && ! $fiche->exists) {
                 $fiche->user_id = $user->id;
             }
             $fiche->save();
@@ -104,10 +107,10 @@ class Enregistreur
         $erreur = fn (string $champ, string $message) => throw ValidationException::withMessages([$champ => $message]);
 
         if ($cle === 'fideles') {
-            $paroisseId = $a['paroisse_id'] ?? $existant?->paroisse_id;
+            $secteurId = $a['secteur_id'] ?? $existant?->secteur_id;
             $cebId = array_key_exists('ceb_id', $a) ? $a['ceb_id'] : $existant?->ceb_id;
-            if ($cebId && ! Ceb::where('id', $cebId)->where('paroisse_id', $paroisseId)->exists()) {
-                $erreur('ceb_uuid', 'Cette CEB n\'appartient pas à la paroisse du fidèle.');
+            if ($cebId && ! Ceb::where('id', $cebId)->where('secteur_id', $secteurId)->exists()) {
+                $erreur('ceb_uuid', 'Cette CEB n\'appartient pas au secteur du fidèle.');
             }
             if (! empty($a['date_naissance']) && $a['date_naissance'] > now()->toDateString()) {
                 $erreur('date_naissance', 'La date de naissance est dans le futur.');
@@ -119,8 +122,8 @@ class Enregistreur
             if (! $fidele) {
                 $erreur('fidele_uuid', 'Le fidèle est obligatoire.');
             }
-            if ($user->estLimiteAUneParoisse() && $fidele->paroisse_id !== $user->paroisse_id) {
-                $erreur('fidele_uuid', 'Ce fidèle ne fait pas partie de votre paroisse.');
+            if ($user->estLimiteAUnSecteur() && $fidele->secteur_id !== $user->secteur_id) {
+                $erreur('fidele_uuid', 'Ce fidèle ne fait pas partie de votre secteur.');
             }
             $type = $a['type'] ?? $existant?->type;
             $date = $a['date_sacrement'] ?? $existant?->date_sacrement;
@@ -138,11 +141,29 @@ class Enregistreur
         }
 
         if ($cle === 'operations') {
+            $cebId = array_key_exists('ceb_id', $a) ? $a['ceb_id'] : $existant?->ceb_id;
+            $secteurId = array_key_exists('secteur_id', $a) ? $a['secteur_id'] : $existant?->secteur_id;
+            if ($cebId) {
+                $ceb = Ceb::find($cebId);
+                if ($secteurId && $ceb->secteur_id !== $secteurId) {
+                    $erreur('ceb_uuid', 'Cette CEB n\'appartient pas à ce secteur.');
+                }
+                if ($user->estLimiteAUnSecteur() && $ceb->secteur_id !== $user->secteur_id) {
+                    $erreur('ceb_uuid', 'Cette CEB ne fait pas partie de votre secteur.');
+                }
+            }
             $sens = $a['sens'] ?? $existant?->sens;
             $categorie = $a['categorie'] ?? $existant?->categorie;
             $permises = $sens === 'recette' ? Ressources::CATEGORIES_RECETTES : Ressources::CATEGORIES_DEPENSES;
             if (! in_array($categorie, $permises, true)) {
                 $erreur('categorie', 'Cette catégorie ne correspond pas à une '.($sens === 'recette' ? 'recette' : 'dépense').'.');
+            }
+        }
+
+        if ($cle === 'depots') {
+            $date = $a['date_depot'] ?? $existant?->date_depot;
+            if ($date && $date > now()->addDay()->toDateString()) {
+                $erreur('date_depot', 'La date du dépôt est dans le futur.');
             }
         }
 
@@ -156,9 +177,9 @@ class Enregistreur
 
         if ($cle === 'activites' && ! empty($refs['mouvement_uuid'])) {
             $mouvement = $refs['mouvement_uuid'];
-            $paroisseId = $a['paroisse_id'] ?? $existant?->paroisse_id;
-            if ($mouvement->paroisse_id && $paroisseId && $mouvement->paroisse_id !== $paroisseId) {
-                $erreur('mouvement_uuid', 'Ce mouvement appartient à une autre paroisse.');
+            $secteurId = $a['secteur_id'] ?? $existant?->secteur_id;
+            if ($mouvement->secteur_id && $secteurId && $mouvement->secteur_id !== $secteurId) {
+                $erreur('mouvement_uuid', 'Ce mouvement appartient à un autre secteur.');
             }
         }
     }

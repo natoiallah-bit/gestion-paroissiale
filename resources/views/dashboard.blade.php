@@ -3,12 +3,12 @@
 
 @section('content')
 <div class="entete">
-    <h1>Tableau de bord @if($paroisseChoisie)— {{ $paroisseChoisie->nom }}@endif</h1>
-    @if($listeParoisses->isNotEmpty())
+    <h1>Tableau de bord @if($secteurChoisie)— {{ $secteurChoisie->nom }}@endif</h1>
+    @if($listeSecteurs->isNotEmpty())
         <form method="GET" class="actions">
-            <select name="paroisse" onchange="this.form.submit()" aria-label="Paroisse">
+            <select name="secteur" onchange="this.form.submit()" aria-label="Secteur">
                 <option value="">Tout le vicariat</option>
-                @foreach($listeParoisses as $p)<option value="{{ $p->id }}" @selected($paroisseChoisie?->id === $p->id)>{{ $p->nom }}</option>@endforeach
+                @foreach($listeSecteurs as $p)<option value="{{ $p->id }}" @selected($secteurChoisie?->id === $p->id)>{{ $p->nom }}</option>@endforeach
             </select>
         </form>
     @endif
@@ -35,12 +35,24 @@
 </div>
 @endif
 
+@if($comptes)
+    <div class="entete"><h2 style="margin:0">Comptes</h2><a href="{{ route('rapports.index') }}" class="btn btn-leger btn-petit">Détail par CEB</a></div>
+    <div class="grille">
+        @if($comptes['central'])
+            <div class="stat"><div class="lib">Caisse centrale du vicariat</div><div class="val positif">{{ fcfa($comptes['central']['caisse']) }}</div><div class="det">{{ fcfa($comptes['central']['recu']) }} reçus des secteurs</div></div>
+        @endif
+        <div class="stat"><div class="lib">{{ auth()->user()->estLimiteAUnSecteur() ? 'Compilé par le secteur' : 'Compilé dans le vicariat' }}</div><div class="val">{{ fcfa($comptes['total_compile']) }}</div></div>
+        <div class="stat"><div class="lib">Déjà déposé au vicariat</div><div class="val positif">{{ fcfa($comptes['total_depose']) }}</div></div>
+        <div class="stat"><div class="lib">Reste à déposer</div><div class="val {{ $comptes['total_reste'] > 0 ? 'negatif' : 'positif' }}">{{ fcfa($comptes['total_reste']) }}</div></div>
+    </div>
+@endif
+
 <div class="deux-col">
     <div class="carte">
         <h2>Annonces en cours</h2>
         @forelse($annonces as $a)
             <p style="margin-bottom:10px"><a href="{{ route('annonces.show', $a) }}"><b>{{ $a->titre }}</b></a>
-                @unless($a->paroisse_id)<span class="badge badge-ambre">vicariat</span>@endunless<br>
+                @unless($a->secteur_id)<span class="badge badge-ambre">vicariat</span>@endunless<br>
                 <span class="aide">{{ \Illuminate\Support\Str::limit($a->contenu, 120) }}</span></p>
         @empty
             <p class="vide">Aucune annonce.</p>
@@ -52,27 +64,27 @@
             <p style="margin-bottom:10px"><b>{{ $a->jour('date_activite')->translatedFormat('D d/m') }}@if($a->heure) à {{ $a->heure }}@endif</b> —
                 <a href="{{ route('activites.show', $a) }}">{{ $a->titre }}</a>
                 @if($a->lieu)<span class="aide"> · {{ $a->lieu }}</span>@endif
-                @unless($a->paroisse_id)<span class="badge badge-ambre">vicariat</span>@endunless</p>
+                @unless($a->secteur_id)<span class="badge badge-ambre">vicariat</span>@endunless</p>
         @empty
             <p class="vide">Rien de prévu.</p>
         @endforelse
     </div>
 </div>
 
-@if($paroisses)
+@if($secteurs)
 <div class="carte tableau">
-    <h2>Les paroisses du vicariat</h2>
+    <h2>Les secteurs du vicariat</h2>
     <table>
-        <thead><tr><th>Paroisse</th><th class="n">Fidèles</th><th class="n">CEB</th><th class="n">Mouvements</th><th class="n">Sacrements {{ today()->year }}</th><th class="n">Recettes {{ today()->year }}</th></tr></thead>
+        <thead><tr><th>Secteur</th><th class="n">Fidèles</th><th class="n">CEB</th><th class="n">Mouvements</th><th class="n">Sacrements {{ today()->year }}</th><th class="n">Recettes {{ today()->year }}</th><th class="n">Déposé au vicariat</th></tr></thead>
         <tbody>
-        @forelse($paroisses as $l)
+        @forelse($secteurs as $l)
             <tr>
-                <td><a href="{{ route('dashboard', ['paroisse' => $l['paroisse']->id]) }}"><b>{{ $l['paroisse']->nom }}</b></a></td>
+                <td><a href="{{ route('dashboard', ['secteur' => $l['secteur']->id]) }}"><b>{{ $l['secteur']->nom }}</b></a></td>
                 <td class="n">{{ number_format($l['fideles'], 0, ',', ' ') }}</td><td class="n">{{ $l['cebs'] }}</td><td class="n">{{ $l['mouvements'] }}</td>
-                <td class="n">{{ $l['sacrements'] }}</td><td class="n">{{ fcfa($l['recettes']) }}</td>
+                <td class="n">{{ $l['sacrements'] }}</td><td class="n">{{ fcfa($l['recettes']) }}</td><td class="n">{{ fcfa($l['depose']) }}</td>
             </tr>
         @empty
-            <tr><td colspan="6" class="vide">Aucune paroisse : <a href="{{ route('paroisses.create') }}">ajoutez la première</a>.</td></tr>
+            <tr><td colspan="7" class="vide">Aucun secteur : <a href="{{ route('secteurs.create') }}">ajoutez la première</a>.</td></tr>
         @endforelse
         </tbody>
     </table>

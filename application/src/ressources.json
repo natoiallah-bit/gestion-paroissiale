@@ -1,9 +1,10 @@
 {
     "ressources": {
-        "paroisses": {
-            "libelle": "Paroisses",
-            "singulier": "paroisse",
-            "article": "une",
+        "secteurs": {
+            "libelle": "Secteurs",
+            "singulier": "secteur",
+            "article": "un",
+            "sous_titre": "Chaque secteur regroupe des CEB, des mouvements et des pastorales",
             "portee": "aucune",
             "lecture": [
                 "admin",
@@ -16,28 +17,20 @@
             "tri": "nom",
             "recherche": [
                 "nom",
-                "localite",
-                "cure"
+                "responsable"
             ],
             "champs": [
                 {
                     "nom": "nom",
-                    "label": "Nom de la paroisse",
+                    "label": "Nom du secteur",
                     "type": "texte",
                     "requis": true,
                     "max": 150,
                     "liste": true
                 },
                 {
-                    "nom": "localite",
-                    "label": "Localité",
-                    "type": "texte",
-                    "max": 150,
-                    "liste": true
-                },
-                {
-                    "nom": "cure",
-                    "label": "Curé",
+                    "nom": "responsable",
+                    "label": "Responsable du secteur",
                     "type": "texte",
                     "max": 150,
                     "liste": true
@@ -46,11 +39,12 @@
                     "nom": "telephone",
                     "label": "Téléphone",
                     "type": "tel",
-                    "max": 30
+                    "max": 30,
+                    "liste": true
                 },
                 {
                     "nom": "adresse",
-                    "label": "Adresse",
+                    "label": "Quartiers couverts / adresse",
                     "type": "texte",
                     "max": 255
                 }
@@ -58,13 +52,18 @@
             "liees": [
                 {
                     "ressource": "cebs",
-                    "cle": "paroisse_uuid",
-                    "titre": "CEB de la paroisse"
+                    "cle": "secteur_uuid",
+                    "titre": "CEB du secteur"
                 },
                 {
                     "ressource": "mouvements",
-                    "cle": "paroisse_uuid",
-                    "titre": "Mouvements et services"
+                    "cle": "secteur_uuid",
+                    "titre": "Mouvements et pastorales du secteur"
+                },
+                {
+                    "ressource": "depots",
+                    "cle": "secteur_uuid",
+                    "titre": "Dépôts au vicariat"
                 }
             ]
         },
@@ -91,10 +90,10 @@
             ],
             "champs": [
                 {
-                    "nom": "paroisse_uuid",
-                    "label": "Paroisse",
+                    "nom": "secteur_uuid",
+                    "label": "Secteur",
                     "type": "ref",
-                    "ref": "paroisses",
+                    "ref": "secteurs",
                     "requis": true,
                     "liste": true
                 },
@@ -108,7 +107,7 @@
                 },
                 {
                     "nom": "quartier",
-                    "label": "Quartier / secteur",
+                    "label": "Quartier",
                     "type": "texte",
                     "max": 150,
                     "liste": true
@@ -132,6 +131,11 @@
                     "ressource": "fideles",
                     "cle": "ceb_uuid",
                     "titre": "Fidèles de la CEB"
+                },
+                {
+                    "ressource": "operations",
+                    "cle": "ceb_uuid",
+                    "titre": "Compte de la CEB au conseil économique du secteur"
                 }
             ],
             "compte": {
@@ -139,9 +143,10 @@
             }
         },
         "mouvements": {
-            "libelle": "Mouvements et services",
-            "singulier": "mouvement ou service",
+            "libelle": "Mouvements et pastorales",
+            "singulier": "mouvement ou pastorale",
             "article": "un",
+            "sous_titre": "Mouvements des jeunes, des adultes, pastorales et services",
             "portee": "facultative",
             "lecture": [
                 "admin",
@@ -159,12 +164,12 @@
             ],
             "champs": [
                 {
-                    "nom": "paroisse_uuid",
-                    "label": "Paroisse",
+                    "nom": "secteur_uuid",
+                    "label": "Secteur",
                     "type": "ref",
-                    "ref": "paroisses",
+                    "ref": "secteurs",
                     "liste": true,
-                    "aide": "Vide = mouvement de tout le vicariat."
+                    "aide": "Vide = mouvement ou pastorale de tout le vicariat."
                 },
                 {
                     "nom": "nom",
@@ -181,7 +186,9 @@
                     "requis": true,
                     "liste": true,
                     "options": {
-                        "mouvement": "Mouvement",
+                        "jeunes": "Mouvement des jeunes",
+                        "adultes": "Mouvement des adultes",
+                        "pastorale": "Pastorale",
                         "service": "Service"
                     }
                 },
@@ -236,10 +243,10 @@
             ],
             "champs": [
                 {
-                    "nom": "paroisse_uuid",
-                    "label": "Paroisse",
+                    "nom": "secteur_uuid",
+                    "label": "Secteur",
                     "type": "ref",
-                    "ref": "paroisses",
+                    "ref": "secteurs",
                     "requis": true
                 },
                 {
@@ -248,7 +255,7 @@
                     "type": "ref",
                     "ref": "cebs",
                     "liste": true,
-                    "meme_paroisse": true
+                    "meme_secteur": true
                 },
                 {
                     "nom": "nom",
@@ -422,11 +429,11 @@
             ]
         },
         "operations": {
-            "libelle": "Finances",
+            "libelle": "Comptes et opérations",
             "singulier": "opération",
             "article": "une",
-            "sous_titre": "Quêtes, denier du culte, intentions de messe, dépenses",
-            "portee": "obligatoire",
+            "sous_titre": "Compte de chaque CEB au conseil économique du secteur, compte du secteur, caisse du vicariat",
+            "portee": "centrale",
             "lecture": [
                 "admin",
                 "tresorier"
@@ -442,11 +449,21 @@
             ],
             "champs": [
                 {
-                    "nom": "paroisse_uuid",
-                    "label": "Paroisse",
+                    "nom": "secteur_uuid",
+                    "label": "Secteur",
                     "type": "ref",
-                    "ref": "paroisses",
-                    "requis": true
+                    "ref": "secteurs",
+                    "liste": true,
+                    "aide": "Vide = caisse centrale du vicariat."
+                },
+                {
+                    "nom": "ceb_uuid",
+                    "label": "Compte de la CEB",
+                    "type": "ref",
+                    "ref": "cebs",
+                    "liste": true,
+                    "meme_secteur": true,
+                    "aide": "Vide = compte du secteur lui-même."
                 },
                 {
                     "nom": "sens",
@@ -455,8 +472,8 @@
                     "requis": true,
                     "liste": true,
                     "options": {
-                        "recette": "Recette",
-                        "depense": "Dépense"
+                        "recette": "Dépôt / recette",
+                        "depense": "Retrait / dépense"
                     }
                 },
                 {
@@ -466,6 +483,7 @@
                     "requis": true,
                     "liste": true,
                     "options": {
+                        "Cotisation de CEB": "Cotisation de CEB",
                         "Quête": "Quête",
                         "Denier du culte": "Denier du culte",
                         "Intention de messe": "Intention de messe",
@@ -478,7 +496,7 @@
                         "Liturgie et culte": "Liturgie et culte",
                         "Transport": "Transport",
                         "Aide aux familles": "Aide aux familles",
-                        "Contribution au diocèse": "Contribution au diocèse",
+                        "Contribution au doyenné / archidiocèse": "Contribution au doyenné / archidiocèse",
                         "Autre dépense": "Autre dépense"
                     }
                 },
@@ -512,6 +530,82 @@
                 }
             ]
         },
+        "depots": {
+            "libelle": "Dépôts au vicariat",
+            "singulier": "dépôt",
+            "article": "un",
+            "sous_titre": "Chaque secteur dépose son argent à la caisse centrale ; les cumuls sont recalculés à chaque dépôt",
+            "portee": "obligatoire",
+            "lecture": [
+                "admin",
+                "tresorier"
+            ],
+            "ecriture": [
+                "admin",
+                "tresorier"
+            ],
+            "tri": "-date_depot",
+            "recherche": [
+                "reference",
+                "deposant"
+            ],
+            "champs": [
+                {
+                    "nom": "secteur_uuid",
+                    "label": "Secteur",
+                    "type": "ref",
+                    "ref": "secteurs",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "date_depot",
+                    "label": "Date du dépôt",
+                    "type": "date",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "montant",
+                    "label": "Montant déposé (FCFA)",
+                    "type": "montant",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "reference",
+                    "label": "N° de reçu",
+                    "type": "texte",
+                    "max": 60,
+                    "liste": true
+                },
+                {
+                    "nom": "deposant",
+                    "label": "Déposé par",
+                    "type": "texte",
+                    "max": 150
+                },
+                {
+                    "nom": "note",
+                    "label": "Note",
+                    "type": "long",
+                    "max": 1000
+                }
+            ],
+            "calculees": [
+                {
+                    "nom": "cumul_secteur",
+                    "label": "Cumul du secteur",
+                    "type": "montant"
+                },
+                {
+                    "nom": "total_vicariat",
+                    "label": "Total au vicariat",
+                    "type": "montant",
+                    "central": true
+                }
+            ]
+        },
         "annonces": {
             "libelle": "Annonces",
             "singulier": "annonce",
@@ -533,10 +627,10 @@
             ],
             "champs": [
                 {
-                    "nom": "paroisse_uuid",
-                    "label": "Paroisse",
+                    "nom": "secteur_uuid",
+                    "label": "Secteur",
                     "type": "ref",
-                    "ref": "paroisses",
+                    "ref": "secteurs",
                     "liste": true,
                     "aide": "Vide = annonce pour tout le vicariat."
                 },
@@ -593,10 +687,10 @@
             ],
             "champs": [
                 {
-                    "nom": "paroisse_uuid",
-                    "label": "Paroisse",
+                    "nom": "secteur_uuid",
+                    "label": "Secteur",
                     "type": "ref",
-                    "ref": "paroisses",
+                    "ref": "secteurs",
                     "liste": true,
                     "aide": "Vide = activité de tout le vicariat."
                 },
@@ -651,6 +745,7 @@
         "obseques": "Obsèques"
     },
     "categories_recettes": [
+        "Cotisation de CEB",
         "Quête",
         "Denier du culte",
         "Intention de messe",
@@ -665,7 +760,7 @@
         "Liturgie et culte",
         "Transport",
         "Aide aux familles",
-        "Contribution au diocèse",
+        "Contribution au doyenné / archidiocèse",
         "Autre dépense"
     ]
 }

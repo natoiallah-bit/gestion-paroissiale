@@ -5,69 +5,85 @@ namespace Database\Seeders;
 use App\Models\Activite;
 use App\Models\Annonce;
 use App\Models\Ceb;
+use App\Models\Depot;
 use App\Models\Fidele;
 use App\Models\Mouvement;
 use App\Models\Operation;
-use App\Models\Paroisse;
 use App\Models\Sacrement;
+use App\Models\Secteur;
 use App\Models\User;
-use App\Models\Vicariat;
 use Illuminate\Database\Seeder;
 
-/** Données d'exemple pour essayer l'application : php artisan db:seed --class=DemoSeeder */
+/**
+ * Données d'exemple (noms inventés) pour essayer l'application :
+ *   php artisan db:seed --class=DemoSeeder
+ */
 class DemoSeeder extends Seeder
 {
     public function run(): void
     {
         $this->call(DatabaseSeeder::class);
-        Vicariat::courant()->update(['nom' => 'Vicariat Saint-Jean', 'diocese' => 'Exemple']);
 
-        $noms = ['Koné', 'Traoré', 'Yao', 'Kouassi', 'Diallo', 'Bamba', 'N\'Guessan', 'Coulibaly'];
-        $prenoms = ['Awa', 'Moussa', 'Marie', 'Jean', 'Fanta', 'Paul', 'Esther', 'Joseph', 'Rose', 'Pierre'];
+        $noms = ['Ndolngar', 'Mahamat', 'Djimadoum', 'Nodjigoto', 'Ngarbaye', 'Allarassem', 'Betoloum', 'Tchoroma'];
+        $prenoms = ['Marie', 'Joseph', 'Esther', 'Jean', 'Rose', 'Pierre', 'Anne', 'Paul', 'Lydie', 'Michel'];
         $admin = User::where('role', 'admin')->first();
 
-        foreach (['Saint-Paul' => 'Abidjan', 'Sainte-Marie' => 'Bouaké'] as $nom => $localite) {
-            $p = Paroisse::firstOrCreate(['nom' => $nom], ['localite' => $localite, 'cure' => 'Abbé '.$noms[array_rand($noms)]]);
-            $slug = strtolower(str_replace(['-', ' '], '', $nom));
+        User::firstOrCreate(['email' => 'tresorier.vicariat@vicariat.local'], [
+            'name' => 'Trésorier du vicariat', 'password' => 'demo1234', 'role' => 'tresorier', 'actif' => true,
+        ]);
 
-            foreach (['secretaire' => 'secretaire', 'tresorier' => 'tresorier'] as $role => $prefixe) {
-                User::firstOrCreate(['email' => "$prefixe.$slug@paroisse.local"], [
-                    'name' => ucfirst($role).' '.$nom, 'password' => 'demo1234', 'role' => $role, 'actif' => true, 'paroisse_id' => $p->id,
+        foreach (['Secteur 1', 'Secteur 2', 'Secteur 3'] as $n => $nom) {
+            $s = Secteur::firstOrCreate(['nom' => $nom], ['responsable' => $prenoms[array_rand($prenoms)].' '.$noms[array_rand($noms)]]);
+            $slug = 'secteur'.($n + 1);
+
+            foreach (['secretaire', 'tresorier'] as $role) {
+                User::firstOrCreate(['email' => "$role.$slug@vicariat.local"], [
+                    'name' => ucfirst($role).' '.$nom, 'password' => 'demo1234', 'role' => $role, 'actif' => true, 'secteur_id' => $s->id,
                 ]);
             }
 
-            $cebs = collect(['Saint-Joseph', 'Sainte-Anne', 'Saint-Pierre'])->map(fn ($n) => Ceb::firstOrCreate(
-                ['paroisse_id' => $p->id, 'nom' => "CEB $n"], ['quartier' => 'Quartier '.$n, 'responsable' => $prenoms[array_rand($prenoms)].' '.$noms[array_rand($noms)]]
+            $cebs = collect(['Saint-Joseph', 'Sainte-Anne', 'Saint-Pierre', 'Sainte-Thérèse'])->map(fn ($c) => Ceb::firstOrCreate(
+                ['secteur_id' => $s->id, 'nom' => "CEB $c"], ['quartier' => 'Quartier '.$c, 'responsable' => $prenoms[array_rand($prenoms)].' '.$noms[array_rand($noms)]]
             ));
 
-            foreach (['Légion de Marie' => 'mouvement', 'Chorale' => 'service', 'Servants de messe' => 'service'] as $n => $type) {
-                Mouvement::firstOrCreate(['paroisse_id' => $p->id, 'nom' => $n], ['type' => $type, 'nombre_membres' => rand(15, 60), 'responsable' => $prenoms[array_rand($prenoms)]]);
+            foreach (['Mouvement des jeunes' => 'jeunes', 'Mouvement des adultes' => 'adultes', 'Pastorale liturgique' => 'pastorale', 'Pastorale familiale' => 'pastorale', 'Chorale' => 'service'] as $m => $type) {
+                Mouvement::firstOrCreate(['secteur_id' => $s->id, 'nom' => $m], ['type' => $type, 'nombre_membres' => rand(15, 80), 'responsable' => $prenoms[array_rand($prenoms)]]);
             }
 
-            if (Fidele::where('paroisse_id', $p->id)->exists()) {
+            if (Fidele::where('secteur_id', $s->id)->exists()) {
                 continue;
             }
             for ($i = 0; $i < 30; $i++) {
+                $nomF = $noms[array_rand($noms)];
+                $naissance = now()->subYears(rand(3, 80))->toDateString();
                 $f = Fidele::create([
-                    'paroisse_id' => $p->id, 'ceb_id' => $cebs->random()->id,
-                    'nom' => $nom_f = $noms[array_rand($noms)], 'prenoms' => $prenoms[array_rand($prenoms)],
-                    'sexe' => rand(0, 1) ? 'M' : 'F', 'date_naissance' => now()->subYears(rand(3, 80))->toDateString(),
-                    'famille' => "Famille $nom_f", 'statut' => 'actif',
+                    'secteur_id' => $s->id, 'ceb_id' => $cebs->random()->id, 'nom' => $nomF, 'prenoms' => $prenoms[array_rand($prenoms)],
+                    'sexe' => rand(0, 1) ? 'M' : 'F', 'date_naissance' => $naissance, 'famille' => "Famille $nomF", 'statut' => 'actif',
                 ]);
                 Sacrement::create([
-                    'fidele_id' => $f->id, 'paroisse_id' => $p->id, 'type' => 'bapteme',
-                    'date_sacrement' => max($f->date_naissance, now()->subYears(rand(0, 2))->toDateString()), 'lieu' => $nom, 'numero_registre' => 'B-'.($i + 1),
+                    'fidele_id' => $f->id, 'secteur_id' => $s->id, 'type' => 'bapteme', 'numero_registre' => 'B-'.($n + 1).'-'.($i + 1),
+                    'date_sacrement' => max($naissance, now()->subYears(rand(0, 2))->toDateString()), 'lieu' => 'Vicariat Christ-Roi',
                 ]);
             }
-            for ($m = 0; $m < 3; $m++) {
-                Operation::create(['paroisse_id' => $p->id, 'user_id' => $admin->id, 'sens' => 'recette', 'categorie' => 'Quête', 'libelle' => 'Quête du dimanche', 'montant' => rand(15, 60) * 1000, 'date_operation' => now()->subWeeks($m)->toDateString()]);
+
+            // Compte de chaque CEB au conseil économique du secteur
+            foreach ($cebs as $ceb) {
+                foreach ([5, 3, 1] as $semaines) {
+                    Operation::create(['secteur_id' => $s->id, 'ceb_id' => $ceb->id, 'user_id' => $admin->id, 'sens' => 'recette', 'categorie' => 'Cotisation de CEB',
+                        'libelle' => 'Cotisation mensuelle', 'montant' => rand(5, 25) * 1000, 'date_operation' => now()->subWeeks($semaines)->toDateString()]);
+                }
             }
-            Operation::create(['paroisse_id' => $p->id, 'user_id' => $admin->id, 'sens' => 'depense', 'categorie' => 'Électricité / eau', 'libelle' => 'Facture du mois', 'montant' => 18000, 'date_operation' => now()->subDays(3)->toDateString()]);
-            Annonce::create(['paroisse_id' => $p->id, 'titre' => 'Messe de rentrée', 'contenu' => 'Dimanche à 9 h, présence de tous les mouvements.', 'date_debut' => today()->toDateString()]);
-            Activite::create(['paroisse_id' => $p->id, 'titre' => 'Réunion des responsables de CEB', 'date_activite' => today()->addDays(6)->toDateString(), 'heure' => '17:00', 'lieu' => 'Salle paroissiale']);
+            Operation::create(['secteur_id' => $s->id, 'user_id' => $admin->id, 'sens' => 'depense', 'categorie' => 'Transport', 'libelle' => 'Déplacement réunion', 'montant' => 7500, 'date_operation' => now()->subDays(4)->toDateString()]);
+
+            // Dépôt du secteur à la caisse centrale du vicariat
+            Depot::create(['secteur_id' => $s->id, 'user_id' => $admin->id, 'montant' => rand(20, 60) * 1000, 'date_depot' => now()->subDays(10 + $n)->toDateString(), 'reference' => 'R-'.($n + 1).'01', 'deposant' => 'Trésorier '.$nom]);
+
+            Annonce::create(['secteur_id' => $s->id, 'titre' => 'Réunion des responsables de CEB', 'contenu' => 'Dimanche après la messe.', 'date_debut' => today()->toDateString()]);
+            Activite::create(['secteur_id' => $s->id, 'titre' => 'Rencontre du mouvement des jeunes', 'date_activite' => today()->addDays(6 + $n)->toDateString(), 'heure' => '16:00', 'lieu' => $nom]);
         }
 
-        Annonce::firstOrCreate(['titre' => 'Rencontre vicariale'], ['contenu' => 'Rencontre des curés et des délégués de chaque paroisse.', 'date_debut' => today()->toDateString()]);
-        Activite::firstOrCreate(['titre' => 'Pèlerinage vicarial'], ['date_activite' => today()->addDays(30)->toDateString(), 'lieu' => 'Sanctuaire marial']);
+        Operation::firstOrCreate(['libelle' => 'Entretien de l\'église', 'secteur_id' => null], ['user_id' => $admin->id, 'sens' => 'depense', 'categorie' => 'Entretien / travaux', 'montant' => 30000, 'date_operation' => now()->subDays(2)->toDateString()]);
+        Annonce::firstOrCreate(['titre' => 'Fête patronale — Christ-Roi'], ['contenu' => 'Messe solennelle, tous les secteurs sont invités.', 'date_debut' => today()->toDateString()]);
+        Activite::firstOrCreate(['titre' => 'Assemblée des conseils économiques'], ['date_activite' => today()->addDays(20)->toDateString(), 'lieu' => 'Vicariat Christ-Roi']);
     }
 }

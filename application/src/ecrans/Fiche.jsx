@@ -1,7 +1,8 @@
 import { useApp } from '../App.jsx';
 import { useCartes, useRequete } from '../crochets.js';
 import { db } from '../db.js';
-import { estLimite, intitule, peutEcrire, peutLire, RESSOURCES, trier, valeur } from '../ressources.js';
+import { cumulsDepots, estLimite, intitule, peutEcrire, peutLire, RESSOURCES, trier, valeur } from '../ressources.js';
+import { fcfa } from '../format.js';
 
 export function Fiche({ cle, uuid }) {
   const { session, naviguer } = useApp();
@@ -15,13 +16,20 @@ export function Fiche({ cle, uuid }) {
       if (!peutLire(user.role, l.ressource)) continue;
       liees.push({ ...l, fiches: await db.table(l.ressource).where(l.cle).equals(uuid).toArray() });
     }
-    return { fiche, liees };
+    // Cumuls recalculés à chaque dépôt ; solde du compte d'une CEB
+    const cumul = cle === 'depots' ? cumulsDepots(await db.depots.toArray()).get(uuid) : null;
+    let solde = null;
+    if (cle === 'cebs' && peutLire(user.role, 'operations')) {
+      const ops = await db.operations.where('ceb_uuid').equals(uuid).toArray();
+      solde = ops.reduce((s, o) => s + (o.sens === 'recette' ? o.montant : -o.montant), 0);
+    }
+    return { fiche, liees, cumul, solde };
   }, [cle, uuid], null);
   if (!donnees || !cartes) return null;
-  const { fiche, liees } = donnees;
+  const { fiche, liees, cumul, solde } = donnees;
   if (!fiche) return <div class="carte vide">Fiche introuvable (peut-être supprimée sur le serveur).</div>;
 
-  const modifiable = peutEcrire(user.role, cle) && !(estLimite(user) && (def.portee === 'aucune' || (fiche.paroisse_uuid ?? null) !== user.paroisse_uuid));
+  const modifiable = peutEcrire(user.role, cle) && !(estLimite(user) && (def.portee === 'aucune' || (fiche.secteur_uuid ?? null) !== user.secteur_uuid));
   const titre = intitule(cle, fiche, cartes);
 
   return (
@@ -49,6 +57,10 @@ export function Fiche({ cle, uuid }) {
                 </td>
               </tr>
             ))}
+            {(def.calculees || []).filter((c) => cumul && (!c.central || !estLimite(user))).map((c) => (
+              <tr key={c.nom}><th>{c.label}</th><td><b>{fcfa(cumul[c.nom])}</b> <span class="aide">après ce dépôt</span></td></tr>
+            ))}
+            {solde !== null && <tr><th>Solde du compte</th><td><b>{fcfa(solde)}</b></td></tr>}
           </tbody>
         </table>
       </div>

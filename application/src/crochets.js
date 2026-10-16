@@ -19,11 +19,11 @@ export function useEtatSync() {
   return etat;
 }
 
-// Tables de référence en mémoire (uuid → fiche) pour afficher les noms de paroisse, CEB, fidèle…
+// Tables de référence en mémoire (uuid → fiche) pour afficher les noms de secteur, CEB, fidèle…
 export function useCartes() {
   return useRequete(async () => {
     const carte = async (t) => new Map((await db.table(t).toArray()).map((f) => [f.uuid, f]));
-    const [paroisses, cebs, mouvements, fideles] = await Promise.all(['paroisses', 'cebs', 'mouvements', 'fideles'].map(carte));
-    return { paroisses, cebs, mouvements, fideles };
+    const [secteurs, cebs, mouvements, fideles] = await Promise.all(['secteurs', 'cebs', 'mouvements', 'fideles'].map(carte));
+    return { secteurs, cebs, mouvements, fideles };
   }, [], null);
 }

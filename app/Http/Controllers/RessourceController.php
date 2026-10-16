@@ -3,16 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Fiche;
-use App\Models\Paroisse;
+use App\Models\Secteur;
 use App\Models\Vicariat;
 use App\Support\Enregistreur;
 use App\Support\Portee;
 use App\Support\Ressources;
+use App\Support\Statistiques;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Pages de toutes les fiches (paroisses, CEB, fidèles, sacrements…), pilotées par
+ * Pages de toutes les fiches (secteurs, CEB, fidèles, sacrements…), pilotées par
  * App\Support\Ressources : une seule logique pour liste, formulaire, fiche et suppression.
  */
 class RessourceController extends Controller
@@ -62,13 +63,13 @@ class RessourceController extends Controller
             });
         }
 
-        // Filtres : choix (statut, type, sens…), références (paroisse, CEB…) et période
+        // Filtres : choix (statut, type, sens…), références (secteur, CEB…) et période
         $filtres = [];
         foreach ($def['champs'] as $champ) {
             if ($champ['type'] === 'choix' && ($champ['liste'] ?? false) && $request->filled($champ['nom'])) {
                 $requete->where($champ['nom'], $request->string($champ['nom']));
             }
-            if ($champ['type'] === 'ref' && in_array($champ['nom'], ['paroisse_uuid', 'ceb_uuid', 'fidele_uuid'], true) && $request->filled($champ['nom'])) {
+            if ($champ['type'] === 'ref' && in_array($champ['nom'], ['secteur_uuid', 'ceb_uuid', 'fidele_uuid'], true) && $request->filled($champ['nom'])) {
                 $cible = Ressources::get($champ['ref'])['modele']::parUuid($request->string($champ['nom']));
                 $requete->where(Ressources::colonne($champ), $cible?->id ?? 0);
             }
@@ -92,16 +93,25 @@ class RessourceController extends Controller
                 'depenses' => (int) (clone $requete)->where('sens', 'depense')->sum('montant'),
             ];
         }
+        if ($cle === 'depots') {
+            $resume = ['depose' => (int) (clone $requete)->sum('montant')];
+        }
         if ($cle === 'mouvements') {
             $resume = ['membres' => (int) (clone $requete)->sum('nombre_membres')];
         }
 
+        $fiches = $requete->paginate(30)->withQueryString();
+        if ($cle === 'depots') {
+            $cumuls = Statistiques::cumulsDepots();
+            $fiches->getCollection()->each(fn ($d) => $d->forceFill($cumuls[$d->id] ?? []));
+        }
+
         return view('ressources.index', [
             'cle' => $cle, 'def' => $def,
-            'fiches' => $requete->paginate(30)->withQueryString(),
+            'fiches' => $fiches,
             'total' => $total, 'resume' => $resume, 'dateChamp' => $dateChamp,
             'peutEcrire' => Ressources::peutEcrire($user, $cle),
-            'options' => $this->optionsRefs($request, $def, ['paroisse_uuid', 'ceb_uuid']),
+            'options' => $this->optionsRefs($request, $def, ['secteur_uuid', 'ceb_uuid']),
         ]);
     }
 
@@ -130,7 +140,15 @@ class RessourceController extends Controller
         $valide = $request->validate(Ressources::regles($cle));
         $fiche = Enregistreur::enregistrer($cle, $valide, $request->user());
 
-        return redirect()->route("$cle.show", $fiche)->with('succes', ucfirst($def['singulier']).' enregistré'.($def['article'] === 'une' ? 'e' : '').'.');
+        $message = ucfirst($def['singulier']).' enregistré'.($def['article'] === 'une' ? 'e' : '').'.';
+        if ($cle === 'depots') {
+            // Les montants sont recalculés à chaque dépôt
+            $cumul = Statistiques::cumulsDepots()[$fiche->id];
+            $message .= ' Cumul déposé par ce secteur : '.fcfa($cumul['cumul_secteur']).'.'
+                .($request->user()->estLimiteAUnSecteur() ? '' : ' Total reçu au vicariat : '.fcfa($cumul['total_vicariat']).'.');
+        }
+
+        return redirect()->route("$cle.show", $fiche)->with('succes', $message);
     }
 
     public function show(Request $request, int $id)
@@ -151,6 +169,10 @@ class RessourceController extends Controller
                 'fiches' => $defLiee['modele']::with($this->relations($defLiee))->where(Ressources::colonne($champ), $fiche->id)
                     ->orderBy(ltrim($defLiee['tri'], '-'), str_starts_with($defLiee['tri'], '-') ? 'desc' : 'asc')->limit(200)->get(),
             ];
+        }
+
+        if ($cle === 'depots') {
+            $fiche->forceFill(Statistiques::cumulsDepots()[$fiche->id] ?? []);
         }
 
         return view('ressources.show', [
@@ -204,7 +226,7 @@ class RessourceController extends Controller
     public function extrait(Request $request, int $id)
     {
         abort_unless(Ressources::peutLire($request->user(), 'sacrements'), 403);
-        $sacrement = $this->fiche($request, 'sacrements', $id)->load('fidele.paroisse', 'fidele.ceb', 'paroisse');
+        $sacrement = $this->fiche($request, 'sacrements', $id)->load('fidele.secteur', 'fidele.ceb', 'secteur');
 
         return view('ressources.extrait', ['sacrement' => $sacrement, 'vicariat' => Vicariat::courant()]);
     }
@@ -224,7 +246,7 @@ class RessourceController extends Controller
             $defCible = Ressources::get($cible);
             $requete = Portee::restreindre($defCible['modele']::query(), $request->user(), $cible);
             $options[$champ['nom']] = $requete->with($this->relations($defCible))->orderBy($defCible['tri'][0] === '-' ? 'id' : $defCible['tri'])->limit(3000)->get()
-                ->map(fn ($f) => ['uuid' => $f->uuid, 'texte' => $f->intitule().($cible === 'cebs' ? ' ('.($f->paroisse?->nom ?? '').')' : ''), 'paroisse' => $f->paroisse?->uuid ?? null]);
+                ->map(fn ($f) => ['uuid' => $f->uuid, 'texte' => $f->intitule().($cible === 'cebs' ? ' ('.($f->secteur?->nom ?? '').')' : ''), 'secteur' => $f->secteur?->uuid ?? null]);
         }
 
         return $options;

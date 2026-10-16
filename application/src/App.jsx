@@ -7,6 +7,7 @@ import { peutLire, RESSOURCES } from './ressources.js';
 import { lireSession } from './session.js';
 import { demarrerAuto, synchroniser } from './sync.js';
 import { Accueil } from './ecrans/Accueil.jsx';
+import { Comptes } from './ecrans/Comptes.jsx';
 import { Connexion } from './ecrans/Connexion.jsx';
 import { Extrait } from './ecrans/Extrait.jsx';
 import { Fiche } from './ecrans/Fiche.jsx';
@@ -18,14 +19,14 @@ import { Synchro } from './ecrans/Synchro.jsx';
 const Contexte = createContext(null);
 export const useApp = () => useContext(Contexte);
 
-const ECRANS = { accueil: Accueil, liste: Liste, fiche: Fiche, formulaire: Formulaire, extrait: Extrait, plus: Plus, synchro: Synchro };
+const ECRANS = { accueil: Accueil, comptes: Comptes, liste: Liste, fiche: Fiche, formulaire: Formulaire, extrait: Extrait, plus: Plus, synchro: Synchro };
 
-const ICONES = { fideles: '👥', cebs: '🏘', mouvements: '🤝', sacrements: '✝', annonces: '📢', activites: '📅', operations: '💰', paroisses: '⛪' };
+const ICONES = { fideles: '👥', cebs: '🏘', mouvements: '🤝', sacrements: '✝', annonces: '📢', activites: '📅', operations: '💰', depots: '🏦', secteurs: '⛪' };
 // Ordre du menu de l'ordinateur ; le titre court sert à la barre du bas (téléphone)
-const ORDRE = ['fideles', 'cebs', 'mouvements', 'sacrements', 'annonces', 'activites', 'operations', 'paroisses'];
-const COURT = { activites: 'Programme', operations: 'Finances', mouvements: 'Mouvements' };
+const ORDRE = ['fideles', 'cebs', 'mouvements', 'sacrements', 'annonces', 'activites', 'operations', 'depots', 'secteurs'];
+const COURT = { activites: 'Programme', operations: 'Comptes', depots: 'Dépôts', mouvements: 'Mouvements' };
 // Barre du bas : Accueil + les 3 premiers écrans autorisés + Menu
-const PRIORITE_MOBILE = ['fideles', 'sacrements', 'activites', 'operations'];
+const PRIORITE_MOBILE = ['fideles', 'sacrements', 'operations', 'depots', 'activites'];
 
 export function App() {
   const [session, setSession] = useState(undefined);
@@ -67,7 +68,7 @@ export function App() {
   ];
   const actif = (m) => {
     const cleCourante = page.params.cle;
-    if (m.id === 'accueil') return page.nom === 'accueil';
+    if (m.id === 'accueil') return page.nom === 'accueil' || page.nom === 'comptes';
     if (m.id === 'synchro') return page.nom === 'synchro';
     if (page.nom === 'extrait') return m.id === 'sacrements';
     return cleCourante === m.id;

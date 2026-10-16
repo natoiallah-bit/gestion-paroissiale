@@ -1,5 +1,5 @@
 // Description des fiches (fidèles, CEB, sacrements…) : fichier ressources.json produit par le serveur
-// (php artisan paroisse:ressources), donc identique à celle du site et des règles de synchronisation.
+// (php artisan vicariat:ressources), donc identique à celle du site et des règles de synchronisation.
 import donnees from './ressources.json';
 import { fcfa } from './format.js';
 
@@ -14,8 +14,21 @@ export const peutEcrire = (role, cle) => RESSOURCES[cle].ecriture.includes(role)
 
 export const champ = (cle, nom) => RESSOURCES[cle].champs.find((c) => c.nom === nom);
 
-// Un compte rattaché à une paroisse ne travaille que dans cette paroisse (l'administrateur voit tout)
-export const estLimite = (utilisateur) => !!utilisateur?.paroisse_uuid && utilisateur.role !== 'admin';
+// Un compte rattaché à un secteur ne travaille que dans ce secteur (l'administrateur voit tout)
+export const estLimite = (utilisateur) => !!utilisateur?.secteur_uuid && utilisateur.role !== 'admin';
+
+// Cumuls recalculés à chaque dépôt (mêmes règles que le serveur : dépôts classés par date puis par identifiant)
+export function cumulsDepots(depots) {
+  const parSecteur = {};
+  let general = 0;
+  const cumuls = new Map();
+  for (const d of [...depots].sort((a, b) => a.date_depot.localeCompare(b.date_depot) || (a.uuid < b.uuid ? -1 : 1))) {
+    parSecteur[d.secteur_uuid] = (parSecteur[d.secteur_uuid] || 0) + d.montant;
+    general += d.montant;
+    cumuls.set(d.uuid, { cumul_secteur: parSecteur[d.secteur_uuid], total_vicariat: general });
+  }
+  return cumuls;
+}
 
 export function intitule(cle, f, cartes = {}) {
   if (!f) return '—';

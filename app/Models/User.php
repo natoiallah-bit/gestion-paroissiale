@@ -16,10 +16,10 @@ class User extends Authenticatable
     public const ROLES = [
         'admin' => 'Administrateur (vicariat)',
         'secretaire' => 'Secrétaire paroissial',
-        'tresorier' => 'Trésorier',
+        'tresorier' => 'Trésorier (conseil économique)',
     ];
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'actif', 'paroisse_id'];
+    protected $fillable = ['name', 'email', 'password', 'role', 'actif', 'secteur_id'];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -32,9 +32,9 @@ class User extends Authenticatable
         ];
     }
 
-    public function paroisse(): BelongsTo
+    public function secteur(): BelongsTo
     {
-        return $this->belongsTo(Paroisse::class);
+        return $this->belongsTo(Secteur::class);
     }
 
     public function estAdmin(): bool
@@ -42,14 +42,14 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
-    /** Un compte rattaché à une paroisse ne voit et ne modifie que celle-ci. */
-    public function estLimiteAUneParoisse(): bool
+    /** Un compte rattaché à un secteur ne voit et ne modifie que celle-ci. */
+    public function estLimiteAUnSecteur(): bool
     {
-        return $this->paroisse_id !== null && ! $this->estAdmin();
+        return $this->secteur_id !== null && ! $this->estAdmin();
     }
 
     public function libelleRole(): string
     {
-        return (self::ROLES[$this->role] ?? $this->role).($this->paroisse ? ' — '.$this->paroisse->nom : '');
+        return (self::ROLES[$this->role] ?? $this->role).($this->secteur ? ' — '.$this->secteur->nom : '');
     }
 }

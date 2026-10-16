@@ -8,8 +8,12 @@
     @csrf @method('PUT')
     <label for="nom">Nom du vicariat</label>
     <input type="text" id="nom" name="nom" value="{{ old('nom', $vicariat->nom) }}" required maxlength="120">
-    <label for="diocese">Diocèse</label>
-    <input type="text" id="diocese" name="diocese" value="{{ old('diocese', $vicariat->diocese) }}" maxlength="150">
+    <label for="archidiocese">Archidiocèse</label>
+    <input type="text" id="archidiocese" name="archidiocese" value="{{ old('archidiocese', $vicariat->archidiocese) }}" maxlength="150">
+    <label for="doyenne">Doyenné</label>
+    <input type="text" id="doyenne" name="doyenne" value="{{ old('doyenne', $vicariat->doyenne) }}" maxlength="150">
+    <label for="responsable">Responsable du vicariat (curé)</label>
+    <input type="text" id="responsable" name="responsable" value="{{ old('responsable', $vicariat->responsable) }}" maxlength="150">
     <label for="adresse">Adresse</label>
     <input type="text" id="adresse" name="adresse" value="{{ old('adresse', $vicariat->adresse) }}" maxlength="255">
     <label for="telephone">Téléphone</label>

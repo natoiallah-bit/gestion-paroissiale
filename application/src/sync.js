@@ -27,7 +27,7 @@ function changerEtat(modif) {
 }
 
 // Pour chaque fiche, seule la dernière version compte ; les tables partent dans l'ordre des
-// dépendances (paroisse → CEB → fidèle → sacrement), comme le serveur les traite.
+// dépendances (secteur → CEB → fidèle → sacrement), comme le serveur les traite.
 export function regrouper(envois) {
   const changements = {};
   for (const cle of CLES) {

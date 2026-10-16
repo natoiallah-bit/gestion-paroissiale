@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use App\Models\Paroisse;
 use App\Models\Sacrement;
+use App\Models\Secteur;
 use App\Models\User;
 use App\Models\Vicariat;
 use App\Support\Ressources;
@@ -24,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
         Paginator::defaultView('partials.pagination');
         Paginator::defaultSimpleView('partials.pagination');
 
-        // Relations « belongsTo » des champs de type ref (paroisse_uuid → ->paroisse, fidele_uuid → ->fidele…)
+        // Relations « belongsTo » des champs de type ref (secteur_uuid → ->secteur, fidele_uuid → ->fidele…)
         foreach (Ressources::toutes() as $def) {
             foreach ($def['champs'] as $champ) {
                 if ($champ['type'] !== 'ref') {
@@ -37,8 +37,8 @@ class AppServiceProvider extends ServiceProvider
                 );
             }
         }
-        User::resolveRelationUsing('paroisse', fn ($m) => $m->belongsTo(Paroisse::class, 'paroisse_id'));
-        Sacrement::resolveRelationUsing('paroisse', fn ($m) => $m->belongsTo(Paroisse::class, 'paroisse_id'));
+        User::resolveRelationUsing('secteur', fn ($m) => $m->belongsTo(Secteur::class, 'secteur_id'));
+        Sacrement::resolveRelationUsing('secteur', fn ($m) => $m->belongsTo(Secteur::class, 'secteur_id'));
 
         // Nom du vicariat affiché dans toutes les pages (une seule requête par page)
         View::composer(['layouts.app', 'auth.login'], function ($view) {

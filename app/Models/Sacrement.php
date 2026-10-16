@@ -15,7 +15,7 @@ class Sacrement extends Fiche
 
     protected function colonnesSupplementaires(): array
     {
-        return ['paroisse_id'];
+        return ['secteur_id'];
     }
 
     public function intitule(): string

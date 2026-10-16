@@ -16,7 +16,9 @@ class ParametreController extends Controller
     {
         Vicariat::courant()->update($request->validate([
             'nom' => 'required|string|max:120',
-            'diocese' => 'nullable|string|max:150',
+            'archidiocese' => 'nullable|string|max:150',
+            'doyenne' => 'nullable|string|max:150',
+            'responsable' => 'nullable|string|max:150',
             'adresse' => 'nullable|string|max:255',
             'telephone' => 'nullable|string|max:60',
             'pied_extrait' => 'nullable|string|max:255',

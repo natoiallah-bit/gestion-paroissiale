@@ -5,11 +5,12 @@ namespace App\Support;
 use App\Models\Activite;
 use App\Models\Annonce;
 use App\Models\Ceb;
+use App\Models\Depot;
 use App\Models\Fidele;
 use App\Models\Mouvement;
 use App\Models\Operation;
-use App\Models\Paroisse;
 use App\Models\Sacrement;
+use App\Models\Secteur;
 use App\Models\User;
 use Illuminate\Validation\Rule;
 
@@ -26,8 +27,9 @@ use Illuminate\Validation\Rule;
  * Un champ « ref » pointe une autre fiche : sa valeur est l'uuid de cette fiche, stocké
  * dans la colonne « <nom sans _uuid>_id ».
  *
- * portee : 'aucune' (fiche commune), 'obligatoire' (rattachée à une paroisse),
- *          'facultative' (paroisse ou tout le vicariat si vide).
+ * portee : 'aucune' (fiche commune), 'obligatoire' (rattachée à un secteur),
+ *          'facultative' (secteur ou tout le vicariat si vide),
+ *          'centrale' (secteur, ou caisse centrale du vicariat si vide : réservée à ceux qui voient tout le vicariat).
  */
 class Ressources
 {
@@ -41,32 +43,33 @@ class Ressources
         'obseques' => 'Obsèques',
     ];
 
-    public const CATEGORIES_RECETTES = ['Quête', 'Denier du culte', 'Intention de messe', 'Don', 'Offrande de sacrement', 'Autre recette'];
+    public const CATEGORIES_RECETTES = ['Cotisation de CEB', 'Quête', 'Denier du culte', 'Intention de messe', 'Don', 'Offrande de sacrement', 'Autre recette'];
 
-    public const CATEGORIES_DEPENSES = ['Entretien / travaux', 'Électricité / eau', 'Salaires et indemnités', 'Liturgie et culte', 'Transport', 'Aide aux familles', 'Contribution au diocèse', 'Autre dépense'];
+    public const CATEGORIES_DEPENSES = ['Entretien / travaux', 'Électricité / eau', 'Salaires et indemnités', 'Liturgie et culte', 'Transport', 'Aide aux familles', 'Contribution au doyenné / archidiocèse', 'Autre dépense'];
 
     public static function toutes(): array
     {
         static $definitions;
 
         return $definitions ??= [
-            'paroisses' => [
-                'modele' => Paroisse::class,
-                'libelle' => 'Paroisses', 'singulier' => 'paroisse', 'article' => 'une',
+            'secteurs' => [
+                'modele' => Secteur::class,
+                'libelle' => 'Secteurs', 'singulier' => 'secteur', 'article' => 'un',
+                'sous_titre' => 'Chaque secteur regroupe des CEB, des mouvements et des pastorales',
                 'portee' => 'aucune',
                 'lecture' => ['admin', 'secretaire', 'tresorier'], 'ecriture' => ['admin'],
                 'tri' => 'nom',
-                'recherche' => ['nom', 'localite', 'cure'],
+                'recherche' => ['nom', 'responsable'],
                 'champs' => [
-                    ['nom' => 'nom', 'label' => 'Nom de la paroisse', 'type' => 'texte', 'requis' => true, 'max' => 150, 'liste' => true],
-                    ['nom' => 'localite', 'label' => 'Localité', 'type' => 'texte', 'max' => 150, 'liste' => true],
-                    ['nom' => 'cure', 'label' => 'Curé', 'type' => 'texte', 'max' => 150, 'liste' => true],
-                    ['nom' => 'telephone', 'label' => 'Téléphone', 'type' => 'tel', 'max' => 30],
-                    ['nom' => 'adresse', 'label' => 'Adresse', 'type' => 'texte', 'max' => 255],
+                    ['nom' => 'nom', 'label' => 'Nom du secteur', 'type' => 'texte', 'requis' => true, 'max' => 150, 'liste' => true],
+                    ['nom' => 'responsable', 'label' => 'Responsable du secteur', 'type' => 'texte', 'max' => 150, 'liste' => true],
+                    ['nom' => 'telephone', 'label' => 'Téléphone', 'type' => 'tel', 'max' => 30, 'liste' => true],
+                    ['nom' => 'adresse', 'label' => 'Quartiers couverts / adresse', 'type' => 'texte', 'max' => 255],
                 ],
                 'liees' => [
-                    ['ressource' => 'cebs', 'cle' => 'paroisse_uuid', 'titre' => 'CEB de la paroisse'],
-                    ['ressource' => 'mouvements', 'cle' => 'paroisse_uuid', 'titre' => 'Mouvements et services'],
+                    ['ressource' => 'cebs', 'cle' => 'secteur_uuid', 'titre' => 'CEB du secteur'],
+                    ['ressource' => 'mouvements', 'cle' => 'secteur_uuid', 'titre' => 'Mouvements et pastorales du secteur'],
+                    ['ressource' => 'depots', 'cle' => 'secteur_uuid', 'titre' => 'Dépôts au vicariat'],
                 ],
             ],
             'cebs' => [
@@ -78,29 +81,31 @@ class Ressources
                 'tri' => 'nom',
                 'recherche' => ['nom', 'quartier', 'responsable'],
                 'champs' => [
-                    ['nom' => 'paroisse_uuid', 'label' => 'Paroisse', 'type' => 'ref', 'ref' => 'paroisses', 'requis' => true, 'liste' => true],
+                    ['nom' => 'secteur_uuid', 'label' => 'Secteur', 'type' => 'ref', 'ref' => 'secteurs', 'requis' => true, 'liste' => true],
                     ['nom' => 'nom', 'label' => 'Nom de la CEB', 'type' => 'texte', 'requis' => true, 'max' => 150, 'liste' => true],
-                    ['nom' => 'quartier', 'label' => 'Quartier / secteur', 'type' => 'texte', 'max' => 150, 'liste' => true],
+                    ['nom' => 'quartier', 'label' => 'Quartier', 'type' => 'texte', 'max' => 150, 'liste' => true],
                     ['nom' => 'responsable', 'label' => 'Responsable', 'type' => 'texte', 'max' => 150, 'liste' => true],
                     ['nom' => 'telephone', 'label' => 'Téléphone', 'type' => 'tel', 'max' => 30],
                 ],
                 'liees' => [
                     ['ressource' => 'fideles', 'cle' => 'ceb_uuid', 'titre' => 'Fidèles de la CEB'],
+                    ['ressource' => 'operations', 'cle' => 'ceb_uuid', 'titre' => 'Compte de la CEB au conseil économique du secteur'],
                 ],
                 'compte' => ['fideles' => 'ceb_uuid'],
             ],
             'mouvements' => [
                 'modele' => Mouvement::class,
-                'libelle' => 'Mouvements et services', 'singulier' => 'mouvement ou service', 'article' => 'un',
+                'libelle' => 'Mouvements et pastorales', 'singulier' => 'mouvement ou pastorale', 'article' => 'un',
+                'sous_titre' => 'Mouvements des jeunes, des adultes, pastorales et services',
                 'portee' => 'facultative',
                 'lecture' => ['admin', 'secretaire', 'tresorier'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
                 'tri' => 'nom',
                 'recherche' => ['nom', 'responsable'],
                 'champs' => [
-                    ['nom' => 'paroisse_uuid', 'label' => 'Paroisse', 'type' => 'ref', 'ref' => 'paroisses', 'liste' => true, 'aide' => 'Vide = mouvement de tout le vicariat.'],
+                    ['nom' => 'secteur_uuid', 'label' => 'Secteur', 'type' => 'ref', 'ref' => 'secteurs', 'liste' => true, 'aide' => 'Vide = mouvement ou pastorale de tout le vicariat.'],
                     ['nom' => 'nom', 'label' => 'Nom', 'type' => 'texte', 'requis' => true, 'max' => 150, 'liste' => true],
                     ['nom' => 'type', 'label' => 'Genre', 'type' => 'choix', 'requis' => true, 'liste' => true,
-                        'options' => ['mouvement' => 'Mouvement', 'service' => 'Service']],
+                        'options' => ['jeunes' => 'Mouvement des jeunes', 'adultes' => 'Mouvement des adultes', 'pastorale' => 'Pastorale', 'service' => 'Service']],
                     ['nom' => 'responsable', 'label' => 'Responsable', 'type' => 'texte', 'max' => 150, 'liste' => true],
                     ['nom' => 'telephone', 'label' => 'Téléphone', 'type' => 'tel', 'max' => 30],
                     ['nom' => 'nombre_membres', 'label' => 'Nombre de membres', 'type' => 'entier', 'requis' => true, 'liste' => true, 'defaut' => 0],
@@ -115,8 +120,8 @@ class Ressources
                 'tri' => 'nom',
                 'recherche' => ['nom', 'prenoms', 'telephone', 'famille'],
                 'champs' => [
-                    ['nom' => 'paroisse_uuid', 'label' => 'Paroisse', 'type' => 'ref', 'ref' => 'paroisses', 'requis' => true],
-                    ['nom' => 'ceb_uuid', 'label' => 'CEB', 'type' => 'ref', 'ref' => 'cebs', 'liste' => true, 'meme_paroisse' => true],
+                    ['nom' => 'secteur_uuid', 'label' => 'Secteur', 'type' => 'ref', 'ref' => 'secteurs', 'requis' => true],
+                    ['nom' => 'ceb_uuid', 'label' => 'CEB', 'type' => 'ref', 'ref' => 'cebs', 'liste' => true, 'meme_secteur' => true],
                     ['nom' => 'nom', 'label' => 'Nom', 'type' => 'texte', 'requis' => true, 'max' => 100, 'liste' => true],
                     ['nom' => 'prenoms', 'label' => 'Prénoms', 'type' => 'texte', 'requis' => true, 'max' => 150, 'liste' => true],
                     ['nom' => 'sexe', 'label' => 'Sexe', 'type' => 'choix', 'requis' => true, 'liste' => true, 'options' => ['M' => 'Masculin', 'F' => 'Féminin']],
@@ -136,7 +141,7 @@ class Ressources
                 'modele' => Sacrement::class,
                 'libelle' => 'Sacrements', 'singulier' => 'sacrement', 'article' => 'un',
                 'sous_titre' => 'Registres de baptême, communion, confirmation, mariage, obsèques',
-                'portee' => 'derivee', // la paroisse est celle du fidèle
+                'portee' => 'derivee', // le secteur est celle du fidèle
                 'lecture' => ['admin', 'secretaire'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
                 'tri' => '-date_sacrement',
                 'recherche' => ['numero_registre', 'lieu', 'ministre'],
@@ -154,21 +159,44 @@ class Ressources
             ],
             'operations' => [
                 'modele' => Operation::class,
-                'libelle' => 'Finances', 'singulier' => 'opération', 'article' => 'une',
-                'sous_titre' => 'Quêtes, denier du culte, intentions de messe, dépenses',
-                'portee' => 'obligatoire',
+                'libelle' => 'Comptes et opérations', 'singulier' => 'opération', 'article' => 'une',
+                'sous_titre' => 'Compte de chaque CEB au conseil économique du secteur, compte du secteur, caisse du vicariat',
+                'portee' => 'centrale', // secteur vide = caisse centrale du vicariat
                 'lecture' => ['admin', 'tresorier'], 'ecriture' => ['admin', 'tresorier'],
                 'tri' => '-date_operation',
                 'recherche' => ['libelle', 'categorie'],
                 'champs' => [
-                    ['nom' => 'paroisse_uuid', 'label' => 'Paroisse', 'type' => 'ref', 'ref' => 'paroisses', 'requis' => true],
-                    ['nom' => 'sens', 'label' => 'Sens', 'type' => 'choix', 'requis' => true, 'liste' => true, 'options' => ['recette' => 'Recette', 'depense' => 'Dépense']],
+                    ['nom' => 'secteur_uuid', 'label' => 'Secteur', 'type' => 'ref', 'ref' => 'secteurs', 'liste' => true, 'aide' => 'Vide = caisse centrale du vicariat.'],
+                    ['nom' => 'ceb_uuid', 'label' => 'Compte de la CEB', 'type' => 'ref', 'ref' => 'cebs', 'liste' => true, 'meme_secteur' => true, 'aide' => 'Vide = compte du secteur lui-même.'],
+                    ['nom' => 'sens', 'label' => 'Sens', 'type' => 'choix', 'requis' => true, 'liste' => true, 'options' => ['recette' => 'Dépôt / recette', 'depense' => 'Retrait / dépense']],
                     ['nom' => 'categorie', 'label' => 'Catégorie', 'type' => 'choix', 'requis' => true, 'liste' => true,
                         'options' => array_combine(array_merge(self::CATEGORIES_RECETTES, self::CATEGORIES_DEPENSES), array_merge(self::CATEGORIES_RECETTES, self::CATEGORIES_DEPENSES))],
                     ['nom' => 'libelle', 'label' => 'Libellé', 'type' => 'texte', 'requis' => true, 'max' => 200, 'liste' => true],
                     ['nom' => 'montant', 'label' => 'Montant (FCFA)', 'type' => 'montant', 'requis' => true, 'liste' => true],
                     ['nom' => 'date_operation', 'label' => 'Date', 'type' => 'date', 'requis' => true, 'liste' => true],
                     ['nom' => 'note', 'label' => 'Note', 'type' => 'long', 'max' => 1000],
+                ],
+            ],
+            'depots' => [
+                'modele' => Depot::class,
+                'libelle' => 'Dépôts au vicariat', 'singulier' => 'dépôt', 'article' => 'un',
+                'sous_titre' => 'Chaque secteur dépose son argent à la caisse centrale ; les cumuls sont recalculés à chaque dépôt',
+                'portee' => 'obligatoire',
+                'lecture' => ['admin', 'tresorier'], 'ecriture' => ['admin', 'tresorier'],
+                'tri' => '-date_depot',
+                'recherche' => ['reference', 'deposant'],
+                'champs' => [
+                    ['nom' => 'secteur_uuid', 'label' => 'Secteur', 'type' => 'ref', 'ref' => 'secteurs', 'requis' => true, 'liste' => true],
+                    ['nom' => 'date_depot', 'label' => 'Date du dépôt', 'type' => 'date', 'requis' => true, 'liste' => true],
+                    ['nom' => 'montant', 'label' => 'Montant déposé (FCFA)', 'type' => 'montant', 'requis' => true, 'liste' => true],
+                    ['nom' => 'reference', 'label' => 'N° de reçu', 'type' => 'texte', 'max' => 60, 'liste' => true],
+                    ['nom' => 'deposant', 'label' => 'Déposé par', 'type' => 'texte', 'max' => 150],
+                    ['nom' => 'note', 'label' => 'Note', 'type' => 'long', 'max' => 1000],
+                ],
+                // Colonnes calculées (jamais saisies) : cumul du secteur et total reçu au vicariat après ce dépôt
+                'calculees' => [
+                    ['nom' => 'cumul_secteur', 'label' => 'Cumul du secteur', 'type' => 'montant'],
+                    ['nom' => 'total_vicariat', 'label' => 'Total au vicariat', 'type' => 'montant', 'central' => true],
                 ],
             ],
             'annonces' => [
@@ -179,7 +207,7 @@ class Ressources
                 'tri' => '-date_debut',
                 'recherche' => ['titre', 'contenu'],
                 'champs' => [
-                    ['nom' => 'paroisse_uuid', 'label' => 'Paroisse', 'type' => 'ref', 'ref' => 'paroisses', 'liste' => true, 'aide' => 'Vide = annonce pour tout le vicariat.'],
+                    ['nom' => 'secteur_uuid', 'label' => 'Secteur', 'type' => 'ref', 'ref' => 'secteurs', 'liste' => true, 'aide' => 'Vide = annonce pour tout le vicariat.'],
                     ['nom' => 'titre', 'label' => 'Titre', 'type' => 'texte', 'requis' => true, 'max' => 200, 'liste' => true],
                     ['nom' => 'contenu', 'label' => 'Texte de l\'annonce', 'type' => 'long', 'requis' => true, 'max' => 5000],
                     ['nom' => 'date_debut', 'label' => 'Publiée le', 'type' => 'date', 'requis' => true, 'liste' => true],
@@ -195,7 +223,7 @@ class Ressources
                 'tri' => 'date_activite',
                 'recherche' => ['titre', 'lieu'],
                 'champs' => [
-                    ['nom' => 'paroisse_uuid', 'label' => 'Paroisse', 'type' => 'ref', 'ref' => 'paroisses', 'liste' => true, 'aide' => 'Vide = activité de tout le vicariat.'],
+                    ['nom' => 'secteur_uuid', 'label' => 'Secteur', 'type' => 'ref', 'ref' => 'secteurs', 'liste' => true, 'aide' => 'Vide = activité de tout le vicariat.'],
                     ['nom' => 'titre', 'label' => 'Activité', 'type' => 'texte', 'requis' => true, 'max' => 200, 'liste' => true],
                     ['nom' => 'date_activite', 'label' => 'Date', 'type' => 'date', 'requis' => true, 'liste' => true],
                     ['nom' => 'heure', 'label' => 'Heure', 'type' => 'heure', 'liste' => true],
@@ -233,13 +261,13 @@ class Ressources
         return null;
     }
 
-    /** Colonne de la base pour un champ : paroisse_uuid → paroisse_id */
+    /** Colonne de la base pour un champ : secteur_uuid → secteur_id */
     public static function colonne(array $champ): string
     {
         return $champ['type'] === 'ref' ? substr($champ['nom'], 0, -5).'_id' : $champ['nom'];
     }
 
-    /** Nom de la relation Eloquent pour un champ ref : paroisse_uuid → paroisse */
+    /** Nom de la relation Eloquent pour un champ ref : secteur_uuid → secteur */
     public static function relation(array $champ): string
     {
         return substr($champ['nom'], 0, -5);
@@ -291,7 +319,7 @@ class Ressources
             }
         }
         if ($cle === 'sacrements') {
-            $donnees['paroisse_uuid'] = $fiche->paroisse?->uuid;
+            $donnees['secteur_uuid'] = $fiche->secteur?->uuid;
         }
 
         return $donnees;

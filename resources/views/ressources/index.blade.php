@@ -38,19 +38,26 @@
 <div class="grille">
     <div class="stat"><div class="lib">Nombre</div><div class="val">{{ number_format($total, 0, ',', ' ') }}</div></div>
     @if($resume && isset($resume['recettes']))
-        <div class="stat"><div class="lib">Recettes</div><div class="val positif">{{ fcfa($resume['recettes']) }}</div></div>
-        <div class="stat"><div class="lib">Dépenses</div><div class="val negatif">{{ fcfa($resume['depenses']) }}</div></div>
+        <div class="stat"><div class="lib">Dépôts / recettes</div><div class="val positif">{{ fcfa($resume['recettes']) }}</div></div>
+        <div class="stat"><div class="lib">Retraits / dépenses</div><div class="val negatif">{{ fcfa($resume['depenses']) }}</div></div>
         <div class="stat"><div class="lib">Solde</div><div class="val {{ $resume['recettes'] >= $resume['depenses'] ? 'positif' : 'negatif' }}">{{ fcfa($resume['recettes'] - $resume['depenses']) }}</div></div>
+    @endif
+    @if($resume && isset($resume['depose']))
+        <div class="stat"><div class="lib">Total déposé</div><div class="val positif">{{ fcfa($resume['depose']) }}</div></div>
     @endif
     @if($resume && isset($resume['membres']))
         <div class="stat"><div class="lib">Membres déclarés</div><div class="val">{{ number_format($resume['membres'], 0, ',', ' ') }}</div></div>
     @endif
 </div>
 
-@php $colonnes = array_values(array_filter($def['champs'], fn ($c) => $c['liste'] ?? false)); @endphp
+@php
+    $colonnes = array_values(array_filter($def['champs'], fn ($c) => $c['liste'] ?? false));
+    $calculees = array_values(array_filter($def['calculees'] ?? [], fn ($c) => ! ($c['central'] ?? false) || ! auth()->user()->estLimiteAUnSecteur()));
+@endphp
 <div class="carte tableau">
     <table>
-        <thead><tr>@foreach($colonnes as $c)<th @class(['n' => $c['type'] === 'montant'])>{{ $c['label'] }}</th>@endforeach<th></th></tr></thead>
+        <thead><tr>@foreach($colonnes as $c)<th @class(['n' => $c['type'] === 'montant'])>{{ $c['label'] }}</th>@endforeach
+            @foreach($calculees as $c)<th class="n">{{ $c['label'] }}</th>@endforeach<th></th></tr></thead>
         <tbody>
         @forelse($fiches as $f)
             <tr>
@@ -62,10 +69,11 @@
                         @else{{ champ_valeur($f, $c) }}@endif
                     </td>
                 @endforeach
+                @foreach($calculees as $c)<td class="n"><b>{{ fcfa($f->{$c['nom']}) }}</b></td>@endforeach
                 <td class="n"><a href="{{ route("$cle.show", $f) }}" class="btn btn-leger btn-petit">Ouvrir</a></td>
             </tr>
         @empty
-            <tr><td colspan="{{ count($colonnes) + 1 }}" class="vide">Rien à afficher.</td></tr>
+            <tr><td colspan="{{ count($colonnes) + count($calculees) + 1 }}" class="vide">Rien à afficher.</td></tr>
         @endforelse
         </tbody>
     </table>

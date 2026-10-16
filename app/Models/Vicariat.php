@@ -11,11 +11,11 @@ class Vicariat extends Model
 
     protected $table = 'vicariat';
 
-    protected $fillable = ['uuid', 'nom', 'diocese', 'adresse', 'telephone', 'pied_extrait'];
+    protected $fillable = ['uuid', 'nom', 'archidiocese', 'doyenne', 'responsable', 'adresse', 'telephone', 'pied_extrait'];
 
     // Une seule ligne de paramètres pour toute l'application
     public static function courant(): self
     {
-        return static::query()->first() ?? static::create(['nom' => 'Vicariat']);
+        return static::query()->first() ?? static::create(['nom' => 'Christ-Roi de Koundoul Ngama', 'archidiocese' => 'N\'Djamena', 'doyenne' => 'N\'Djamena Sud']);
     }
 }

@@ -3,9 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Ceb;
+use App\Models\Depot;
 use App\Models\Fidele;
-use App\Models\Paroisse;
 use App\Models\Sacrement;
+use App\Models\Secteur;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -48,9 +49,9 @@ class SynchronisationTest extends TestCase
         [$p, $c, $f, $s] = [(string) Str::uuid(), (string) Str::uuid(), (string) Str::uuid(), (string) Str::uuid()];
 
         $changements = [
-            'paroisses' => [['uuid' => $p, 'nom' => 'Saint-Paul', 'localite' => 'Abidjan']],
-            'cebs' => [['uuid' => $c, 'paroisse_uuid' => $p, 'nom' => 'CEB Saint-Joseph']],
-            'fideles' => [['uuid' => $f, 'paroisse_uuid' => $p, 'ceb_uuid' => $c, 'nom' => 'Koné', 'prenoms' => 'Awa', 'sexe' => 'F', 'statut' => 'actif']],
+            'secteurs' => [['uuid' => $p, 'nom' => 'Saint-Paul', 'localite' => 'Abidjan']],
+            'cebs' => [['uuid' => $c, 'secteur_uuid' => $p, 'nom' => 'CEB Saint-Joseph']],
+            'fideles' => [['uuid' => $f, 'secteur_uuid' => $p, 'ceb_uuid' => $c, 'nom' => 'Koné', 'prenoms' => 'Awa', 'sexe' => 'F', 'statut' => 'actif']],
             'sacrements' => [['uuid' => $s, 'fidele_uuid' => $f, 'type' => 'bapteme', 'date_sacrement' => '2001-04-12']],
         ];
 
@@ -58,12 +59,12 @@ class SynchronisationTest extends TestCase
         $this->assertSame([], $r1['rejets']);
         $this->assertSame([$s], $r1['acceptes']['sacrements']);
         $this->assertSame($c, $r1['donnees']['fideles'][0]['ceb_uuid']);
-        $this->assertSame($p, $r1['donnees']['sacrements'][0]['paroisse_uuid']);
+        $this->assertSame($p, $r1['donnees']['sacrements'][0]['secteur_uuid']);
 
         // Connexion coupée avant la réponse : l'appareil renvoie tout
         $r2 = $this->synchro($jeton, 0, $changements)->assertOk()->json();
         $this->assertSame([], $r2['rejets']);
-        $this->assertSame(1, Paroisse::count());
+        $this->assertSame(1, Secteur::count());
         $this->assertSame(1, Fidele::count());
         $this->assertSame(1, Sacrement::count());
 
@@ -76,15 +77,15 @@ class SynchronisationTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
         $jeton = $this->connecter($admin)['jeton'];
-        $p = Paroisse::create(['nom' => 'A']);
-        $ceb = Ceb::create(['paroisse_id' => $p->id, 'nom' => 'CEB']);
+        $p = Secteur::create(['nom' => 'A']);
+        $ceb = Ceb::create(['secteur_id' => $p->id, 'nom' => 'CEB']);
         $revision = $this->synchro($jeton)->json('revision');
 
         $ceb->update(['responsable' => 'Mme Yao']);
         $r = $this->synchro($jeton, $revision)->json();
         $this->assertCount(1, $r['donnees']['cebs']);
         $this->assertSame('Mme Yao', $r['donnees']['cebs'][0]['responsable']);
-        $this->assertCount(0, $r['donnees']['paroisses']);
+        $this->assertCount(0, $r['donnees']['secteurs']);
 
         $uuid = $ceb->uuid;
         $ceb->delete();
@@ -96,8 +97,8 @@ class SynchronisationTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
         $jeton = $this->connecter($admin)['jeton'];
-        $p = Paroisse::create(['nom' => 'A']);
-        $f = Fidele::create(['paroisse_id' => $p->id, 'nom' => 'X', 'prenoms' => 'Y', 'sexe' => 'M', 'statut' => 'actif']);
+        $p = Secteur::create(['nom' => 'A']);
+        $f = Fidele::create(['secteur_id' => $p->id, 'nom' => 'X', 'prenoms' => 'Y', 'sexe' => 'M', 'statut' => 'actif']);
         $ok = (string) Str::uuid();
         $doublon = (string) Str::uuid();
 
@@ -116,29 +117,29 @@ class SynchronisationTest extends TestCase
 
     public function test_chaque_role_recoit_et_envoie_seulement_ce_qui_le_concerne(): void
     {
-        $a = Paroisse::create(['nom' => 'A']);
-        $b = Paroisse::create(['nom' => 'B']);
-        Fidele::create(['paroisse_id' => $a->id, 'nom' => 'ChezA', 'prenoms' => 'x', 'sexe' => 'M', 'statut' => 'actif']);
-        Fidele::create(['paroisse_id' => $b->id, 'nom' => 'ChezB', 'prenoms' => 'x', 'sexe' => 'M', 'statut' => 'actif']);
+        $a = Secteur::create(['nom' => 'A']);
+        $b = Secteur::create(['nom' => 'B']);
+        Fidele::create(['secteur_id' => $a->id, 'nom' => 'ChezA', 'prenoms' => 'x', 'sexe' => 'M', 'statut' => 'actif']);
+        Fidele::create(['secteur_id' => $b->id, 'nom' => 'ChezB', 'prenoms' => 'x', 'sexe' => 'M', 'statut' => 'actif']);
 
-        $secretaire = User::factory()->create(['role' => 'secretaire', 'paroisse_id' => $a->id]);
+        $secretaire = User::factory()->create(['role' => 'secretaire', 'secteur_id' => $a->id]);
         $r = $this->synchro($this->connecter($secretaire)['jeton'])->json();
         $this->assertSame(['ChezA'], array_column($r['donnees']['fideles'], 'nom'));
-        $this->assertSame(['A'], array_column($r['donnees']['paroisses'], 'nom'));
+        $this->assertSame(['A'], array_column($r['donnees']['secteurs'], 'nom'));
         $this->assertArrayNotHasKey('operations', $r['donnees']);
 
-        // Un fidèle envoyé pour la paroisse B est enregistré dans la paroisse A
+        // Un fidèle envoyé pour le secteur B est enregistré dans le secteur A
         $nouveau = (string) Str::uuid();
         $r = $this->synchro($this->connecter($secretaire)['jeton'], 0, ['fideles' => [
-            ['uuid' => $nouveau, 'paroisse_uuid' => $b->uuid, 'nom' => 'Nouveau', 'prenoms' => 'x', 'sexe' => 'F', 'statut' => 'actif'],
+            ['uuid' => $nouveau, 'secteur_uuid' => $b->uuid, 'nom' => 'Nouveau', 'prenoms' => 'x', 'sexe' => 'F', 'statut' => 'actif'],
         ]])->json();
         $this->assertSame([], $r['rejets']);
-        $this->assertSame($a->id, Fidele::where('uuid', $nouveau)->value('paroisse_id'));
+        $this->assertSame($a->id, Fidele::where('uuid', $nouveau)->value('secteur_id'));
 
         // Le trésorier ne reçoit pas les fidèles et n'a pas le droit d'en envoyer
-        $tresorier = User::factory()->create(['role' => 'tresorier', 'paroisse_id' => $a->id]);
+        $tresorier = User::factory()->create(['role' => 'tresorier', 'secteur_id' => $a->id]);
         $r = $this->synchro($this->connecter($tresorier)['jeton'], 0, ['fideles' => [
-            ['uuid' => (string) Str::uuid(), 'paroisse_uuid' => $a->uuid, 'nom' => 'Non', 'prenoms' => 'x', 'sexe' => 'F', 'statut' => 'actif'],
+            ['uuid' => (string) Str::uuid(), 'secteur_uuid' => $a->uuid, 'nom' => 'Non', 'prenoms' => 'x', 'sexe' => 'F', 'statut' => 'actif'],
         ]])->json();
         $this->assertArrayNotHasKey('fideles', $r['donnees']);
         $this->assertCount(1, $r['rejets']);
@@ -151,5 +152,31 @@ class SynchronisationTest extends TestCase
         $jeton = $this->connecter($user)['jeton'];
         $user->update(['actif' => false]);
         $this->synchro($jeton)->assertForbidden();
+    }
+
+    public function test_depots_et_comptes_de_ceb_se_synchronisent_selon_le_role(): void
+    {
+        $a = Secteur::create(['nom' => 'A']);
+        $b = Secteur::create(['nom' => 'B']);
+        $cebA = Ceb::create(['secteur_id' => $a->id, 'nom' => 'CEB A']);
+        $tresorierA = User::factory()->create(['role' => 'tresorier', 'secteur_id' => $a->id]);
+        $central = User::factory()->create(['role' => 'tresorier']);
+        $dB = (string) Str::uuid();
+
+        $r = $this->synchro($this->connecter($central)['jeton'], 0, ['depots' => [
+            ['uuid' => $dB, 'secteur_uuid' => $b->uuid, 'date_depot' => '2026-03-01', 'montant' => 7000],
+        ]])->json();
+        $this->assertSame([], $r['rejets']);
+
+        $ope = (string) Str::uuid();
+        $r = $this->synchro($this->connecter($tresorierA)['jeton'], 0, [
+            'operations' => [['uuid' => $ope, 'ceb_uuid' => $cebA->uuid, 'sens' => 'recette', 'categorie' => 'Cotisation de CEB', 'libelle' => 'x', 'montant' => 12000, 'date_operation' => '2026-03-02']],
+            'depots' => [['uuid' => (string) Str::uuid(), 'secteur_uuid' => $b->uuid, 'date_depot' => '2026-03-03', 'montant' => 1000]],
+        ])->json();
+        $this->assertSame([$ope], $r['acceptes']['operations']);
+        $this->assertSame($a->uuid, $r['donnees']['operations'][0]['secteur_uuid']);
+        // Le dépôt envoyé est enregistré dans son propre secteur, et le dépôt du secteur B reste invisible
+        $this->assertSame([], array_filter($r['donnees']['depots'], fn ($d) => $d['uuid'] === $dB));
+        $this->assertSame(0, Depot::where('secteur_id', $b->id)->where('montant', 1000)->count());
     }
 }

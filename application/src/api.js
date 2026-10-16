@@ -5,7 +5,7 @@ export class ErreurSession extends Error {}
 export function normaliserServeur(adresse) {
   let a = (adresse || '').trim().replace(/\/+$/, '');
   if (a && !/^https?:\/\//i.test(a)) {
-    // Ordinateur de la paroisse (192.168.x.x:8200, localhost…) : http ; serveur en ligne : https
+    // Ordinateur du secteur (192.168.x.x:8200, localhost…) : http ; serveur en ligne : https
     const local = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)|^[\d.]+(:\d+)?$/i.test(a);
     a = (local ? 'http://' : 'https://') + a;
   }

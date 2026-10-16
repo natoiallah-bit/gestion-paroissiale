@@ -7,7 +7,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Un compte rattaché à une paroisse (secrétaire, trésorier) ne voit que sa paroisse
+ * Un compte rattaché à un secteur (secrétaire, trésorier) ne voit que son secteur
  * — plus, en lecture, les annonces, activités et mouvements de tout le vicariat.
  * L'administrateur voit tout.
  */
@@ -15,15 +15,17 @@ class Portee
 {
     public static function restreindre(Builder $requete, ?User $user, string $cle): Builder
     {
-        if (! $user || ! $user->estLimiteAUneParoisse()) {
+        if (! $user || ! $user->estLimiteAUnSecteur()) {
             return $requete;
         }
-        $paroisse = $user->paroisse_id;
+        $secteur = $user->secteur_id;
 
         return match (Ressources::get($cle)['portee']) {
-            'aucune' => $requete->where('id', $paroisse),
-            'facultative' => $requete->where(fn ($w) => $w->where('paroisse_id', $paroisse)->orWhereNull('paroisse_id')),
-            default => $requete->where('paroisse_id', $paroisse),
+            'aucune' => $requete->where('id', $secteur),
+            'facultative' => $requete->where(fn ($w) => $w->where('secteur_id', $secteur)->orWhereNull('secteur_id')),
+            // Comptes : un secteur ne voit jamais la caisse centrale ni les autres secteurs
+            'centrale' => $requete->where('secteur_id', $secteur),
+            default => $requete->where('secteur_id', $secteur),
         };
     }
 
@@ -33,13 +35,13 @@ class Portee
         if (! Ressources::peutEcrire($user, $cle)) {
             return false;
         }
-        if (! $user->estLimiteAUneParoisse()) {
+        if (! $user->estLimiteAUnSecteur()) {
             return true;
         }
 
         return match (Ressources::get($cle)['portee']) {
             'aucune' => false,
-            default => $fiche->paroisse_id === $user->paroisse_id,
+            default => $fiche->secteur_id === $user->secteur_id,
         };
     }
 }

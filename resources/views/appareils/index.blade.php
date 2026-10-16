@@ -18,7 +18,7 @@
         <p class="aide" style="margin-top:6px">Application Windows sur cet ordinateur : <b>http://127.0.0.1:{{ request()->getPort() }}</b>.
             Si un téléphone n'arrive pas à se connecter : même Wi-Fi, données mobiles coupées, et PHP autorisé dans le pare-feu Windows (réseaux privés).</p>
     @else
-        <p class="negatif">Cet ordinateur n'est connecté à aucun réseau : branchez-le au Wi-Fi de la paroisse pour que les téléphones le trouvent.</p>
+        <p class="negatif">Cet ordinateur n'est connecté à aucun réseau : branchez-le au Wi-Fi du secteur pour que les téléphones le trouvent.</p>
     @endif
 </div>
 

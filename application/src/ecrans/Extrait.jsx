@@ -17,7 +17,7 @@ export function Extrait({ uuid }) {
   const { sacrement: s, vicariat } = donnees;
   if (!s) return <div class="carte vide">Sacrement introuvable.</div>;
   const f = cartes.fideles.get(s.fidele_uuid) || {};
-  const p = cartes.paroisses.get(s.paroisse_uuid) || {};
+  const p = cartes.secteurs.get(s.secteur_uuid) || {};
   const lignes = [
     ['Nom et prénoms', `${f.prenoms || ''} ${String(f.nom || '').toUpperCase()}`.trim()],
     ['Sexe', f.sexe === 'M' ? 'Masculin' : 'Féminin'],
@@ -28,7 +28,7 @@ export function Extrait({ uuid }) {
     s.numero_registre && ['Registre n°', s.numero_registre],
   ].filter(Boolean);
 
-  const texte = `Extrait du registre — ${SACREMENTS[s.type]}\n${vicariat?.nom || ''} · Paroisse ${p.nom || ''}\n` + lignes.map(([a, b]) => `${a} : ${b}`).join('\n');
+  const texte = `Extrait du registre — ${SACREMENTS[s.type]}\nVicariat ${vicariat?.nom || ''} · Secteur ${p.nom || ''}\n` + lignes.map(([a, b]) => `${a} : ${b}`).join('\n');
   const partager = async () => {
     try {
       const { Share } = await import('@capacitor/share');
@@ -45,13 +45,14 @@ export function Extrait({ uuid }) {
       </div>
       <div class="carte" style="max-width:700px; font-family:Georgia, serif; line-height:1.6">
         <div style="text-align:center; border-bottom:2px solid #1e2420; padding-bottom:10px; margin-bottom:18px">
-          {vicariat?.diocese && <div style="text-transform:uppercase; font-size:12px; letter-spacing:1px">Diocèse de {vicariat.diocese}</div>}
-          <div style="font-size:20px; font-weight:bold">{vicariat?.nom}</div>
-          <div style="text-transform:uppercase; font-size:12px; letter-spacing:1px">Paroisse {p.nom}{p.localite ? ' — ' + p.localite : ''}</div>
+          {vicariat?.archidiocese && <div style="text-transform:uppercase; font-size:12px; letter-spacing:1px">Archidiocèse de {vicariat.archidiocese}</div>}
+          {vicariat?.doyenne && <div style="text-transform:uppercase; font-size:12px; letter-spacing:1px">Doyenné de {vicariat.doyenne}</div>}
+          <div style="font-size:20px; font-weight:bold">Vicariat {vicariat?.nom}</div>
+          <div style="text-transform:uppercase; font-size:12px; letter-spacing:1px">Secteur {p.nom}{cartes.cebs.get(f.ceb_uuid) ? ' — ' + cartes.cebs.get(f.ceb_uuid).nom : ''}</div>
         </div>
         <h2 style="text-align:center; text-transform:uppercase; margin-bottom:18px">Extrait du registre — {SACREMENTS[s.type]}</h2>
         {lignes.map(([a, b]) => <div key={a} style="display:flex; gap:12px; margin-bottom:4px"><span style="width:220px; color:#555">{a}</span><b>{b}</b></div>)}
-        <div style="display:flex; justify-content:space-between; margin-top:40px"><span>Fait à {p.localite || p.nom}, le {long(new Date().toISOString().slice(0, 10))}</span><span>Le curé{p.cure ? ' : ' + p.cure : ''}</span></div>
+        <div style="display:flex; justify-content:space-between; margin-top:40px"><span>Fait à {vicariat?.nom}, le {long(new Date().toISOString().slice(0, 10))}</span><span>Le curé{vicariat?.responsable ? ' : ' + vicariat.responsable : ''}</span></div>
         <div style="margin-top:24px; text-align:center; font-size:12px; color:#555">{vicariat?.pied_extrait || 'Pour copie conforme au registre.'}</div>
       </div>
     </>

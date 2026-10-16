@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
     {
         Vicariat::courant();
 
-        $email = env('ADMIN_EMAIL', 'admin@paroisse.local');
+        $email = env('ADMIN_EMAIL', 'admin@vicariat.local');
         if (! User::where('email', $email)->exists()) {
             User::create([
                 'name' => 'Administrateur',

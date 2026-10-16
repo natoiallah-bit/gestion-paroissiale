@@ -1,6 +1,6 @@
 # Gestion paroissiale et vicariale
 
-Gestion d'un vicariat et de ses paroisses, en français, montants en FCFA : fidèles et familles, CEB,
+Gestion d'un vicariat et de ses secteurs, en français, montants en FCFA : fidèles et familles, CEB,
 mouvements et services, sacrements, finances, annonces et programme des activités.
 
 Même logique que *gestion-de-commerce* — trois parties :
@@ -13,7 +13,7 @@ Même logique que *gestion-de-commerce* — trois parties :
 
 Les applications Android et Windows sont construites à partir du dossier [`application/`](application/).
 
-## Utiliser en local (sur l'ordinateur du vicariat ou de la paroisse)
+## Utiliser en local (sur l'ordinateur du vicariat ou du secteur)
 
 Le serveur tourne sur un ordinateur, avec SQLite. Les téléphones s'y connectent par le **Wi-Fi** (pas besoin d'internet, sauf pour l'installation).
 
@@ -31,28 +31,28 @@ Si l'installation échoue, `installer.bat` explique le problème et l'écrit dan
 
 Toutes les données sont dans `database/database.sqlite` : **copiez ce fichier régulièrement** sur une clé USB.
 
-Compte administrateur créé par défaut : `admin@paroisse.local` / `changer-ce-mot-de-passe`
+Compte administrateur créé par défaut : `admin@vicariat.local` / `changer-ce-mot-de-passe`
 (modifiable avant l'installation avec `ADMIN_EMAIL` et `ADMIN_PASSWORD` dans `.env`). Changez le mot de passe dès la première connexion.
 
 ## Mise en route
 
 1. **Paramètres** : nom du vicariat, diocèse (utilisés sur les extraits de registre).
-2. **Paroisses** : créer les paroisses du vicariat.
-3. **Utilisateurs** : créer un secrétaire et un trésorier par paroisse.
+2. **Secteurs** : créer les secteurs du vicariat.
+3. **Utilisateurs** : créer un secrétaire et un trésorier par secteur.
 4. Les secrétaires saisissent CEB, fidèles, sacrements, mouvements, annonces et programme.
 
 Pour essayer avec des données d'exemple : `php artisan db:seed --class=DemoSeeder`
-(comptes `secretaire.saintpaul@paroisse.local`, `tresorier.saintpaul@paroisse.local`… / `demo1234`).
+(comptes `secretaire.saintpaul@vicariat.local`, `tresorier.saintpaul@vicariat.local`… / `demo1234`).
 
 ## Qui voit quoi
 
 | Rôle | Accès |
 |---|---|
-| **Administrateur** (vicariat) | Tout le vicariat : toutes les paroisses, utilisateurs, appareils, paramètres, statistiques consolidées |
-| **Secrétaire** (d'une paroisse) | CEB, fidèles, mouvements, sacrements, annonces, programme **de sa paroisse** ; lecture des annonces et activités du vicariat |
-| **Trésorier** (d'une paroisse) | Finances **de sa paroisse** ; lecture des annonces et du programme |
+| **Administrateur** (vicariat) | Tout le vicariat : toutes les secteurs, utilisateurs, appareils, paramètres, statistiques consolidées |
+| **Secrétaire** (d'un secteur) | CEB, fidèles, mouvements, sacrements, annonces, programme **de son secteur** ; lecture des annonces et activités du vicariat |
+| **Trésorier** (d'un secteur) | Finances **de son secteur** ; lecture des annonces et du programme |
 
-Un compte rattaché à une paroisse ne voit et ne modifie que cette paroisse, sur le site comme dans l'application
+Un compte rattaché à un secteur ne voit et ne modifie que ce secteur, sur le site comme dans l'application
 (le serveur filtre les données envoyées à chaque appareil).
 
 ## Fonctionnalités
@@ -60,19 +60,19 @@ Un compte rattaché à une paroisse ne voit et ne modifie que cette paroisse, su
 | Module | Contenu |
 |---|---|
 | **Fidèles & familles** | Registre des paroissiens (identité, famille, CEB, situation actif / décédé / transféré), recherche, filtres |
-| **CEB** | Communautés ecclésiales de base par paroisse, responsable, nombre de fidèles |
+| **CEB** | Communautés ecclésiales de base par secteur, responsable, nombre de fidèles |
 | **Mouvements & services** | Légion de Marie, chorale, servants de messe… avec responsable et nombre de membres |
 | **Sacrements** | Baptême, première communion, confirmation, mariage, obsèques ; n° de registre ; **extrait de registre imprimable** |
 | **Finances** | Quêtes, denier du culte, intentions de messe, dons, dépenses ; bilan par période et par catégorie |
-| **Annonces** | Pour une paroisse ou pour tout le vicariat, avec période de validité |
+| **Annonces** | Pour un secteur ou pour tout le vicariat, avec période de validité |
 | **Programme** | Activités de la vie vicariale et paroissiale, avec date, heure, lieu, organisateur |
-| **Tableau de bord & rapports** | Effectifs (hommes / femmes / familles), sacrements de l'année, finances, vue consolidée par paroisse |
+| **Tableau de bord & rapports** | Effectifs (hommes / femmes / familles), sacrements de l'année, finances, vue consolidée par secteur |
 
 Règles contrôlées partout (site, application, synchronisation) :
 - baptême, première communion, confirmation et obsèques ne s'enregistrent **qu'une fois** par fidèle ;
 - un sacrement ne peut pas précéder la naissance ni être dans le futur ; des **obsèques passent le fidèle en « décédé »** ;
-- la CEB d'un fidèle doit être de sa paroisse ; la catégorie d'une opération doit correspondre à une recette ou une dépense ;
-- un fidèle ayant des sacrements, ou une paroisse non vide, ne peut pas être supprimé ;
+- la CEB d'un fidèle doit être de son secteur ; la catégorie d'une opération doit correspondre à une recette ou une dépense ;
+- un fidèle ayant des sacrements, ou un secteur non vide, ne peut pas être supprimé ;
 - supprimer une CEB ou un mouvement détache proprement ses fidèles / activités.
 
 ## Télécharger les applications
@@ -113,7 +113,7 @@ Les champs, droits et règles de chaque fiche sont décrits **une seule fois** d
 Le site, la validation de la synchronisation et l'application s'appuient dessus. Après l'avoir modifié :
 
 ```bash
-php artisan paroisse:ressources   # met à jour application/src/ressources.json (un test vérifie qu'il est à jour)
+php artisan vicariat:ressources   # met à jour application/src/ressources.json (un test vérifie qu'il est à jour)
 ```
 
 ## Tests

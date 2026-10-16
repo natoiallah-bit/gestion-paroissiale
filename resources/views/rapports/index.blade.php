@@ -5,10 +5,10 @@
 <div class="entete pas-imprimer"><h1>Rapports</h1><button class="btn btn-leger" onclick="window.print()">Imprimer</button></div>
 
 <form class="filtres pas-imprimer" method="GET">
-    @if($paroisses->isNotEmpty())
-        <div><label for="paroisse">Paroisse</label>
-            <select id="paroisse" name="paroisse"><option value="">Tout le vicariat</option>
-                @foreach($paroisses as $p)<option value="{{ $p->id }}" @selected((int) $paroisseId === $p->id)>{{ $p->nom }}</option>@endforeach
+    @if($secteurs->isNotEmpty())
+        <div><label for="secteur">Secteur</label>
+            <select id="secteur" name="secteur"><option value="">Tout le vicariat</option>
+                @foreach($secteurs as $p)<option value="{{ $p->id }}" @selected((int) $secteurId === $p->id)>{{ $p->nom }}</option>@endforeach
             </select></div>
     @endif
     <div><label for="du">Finances du</label><input type="date" id="du" name="du" value="{{ $du->toDateString() }}"></div>
@@ -63,14 +63,19 @@
 </div>
 @endif
 
-@if($parParoisse)
+@if($comptes)
+<h2>Compilation des comptes</h2>
+@include('partials.comptes')
+@endif
+
+@if($parSecteur)
 <div class="carte tableau">
-    <h2>Par paroisse</h2>
+    <h2>Par secteur</h2>
     <table>
-        <thead><tr><th>Paroisse</th><th class="n">Fidèles</th><th class="n">CEB</th><th class="n">Mouvements</th><th class="n">Sacrements {{ today()->year }}</th><th class="n">Recettes {{ today()->year }}</th></tr></thead>
+        <thead><tr><th>Secteur</th><th class="n">Fidèles</th><th class="n">CEB</th><th class="n">Mouvements</th><th class="n">Sacrements {{ today()->year }}</th><th class="n">Recettes {{ today()->year }}</th><th class="n">Déposé au vicariat</th></tr></thead>
         <tbody>
-        @foreach($parParoisse as $l)
-            <tr><td><b>{{ $l['paroisse']->nom }}</b></td><td class="n">{{ number_format($l['fideles'], 0, ',', ' ') }}</td><td class="n">{{ $l['cebs'] }}</td><td class="n">{{ $l['mouvements'] }}</td><td class="n">{{ $l['sacrements'] }}</td><td class="n">{{ fcfa($l['recettes']) }}</td></tr>
+        @foreach($parSecteur as $l)
+            <tr><td><b>{{ $l['secteur']->nom }}</b></td><td class="n">{{ number_format($l['fideles'], 0, ',', ' ') }}</td><td class="n">{{ $l['cebs'] }}</td><td class="n">{{ $l['mouvements'] }}</td><td class="n">{{ $l['sacrements'] }}</td><td class="n">{{ fcfa($l['recettes']) }}</td><td class="n">{{ fcfa($l['depose']) }}</td></tr>
         @endforeach
         </tbody>
     </table>

@@ -107,7 +107,7 @@ lancer($php.' artisan optimize:clear');
 
 dire('[6/6] Termine !');
 dire('');
-dire('compte administrateur : admin@paroisse.local / changer-ce-mot-de-passe');
+dire('compte administrateur : admin@vicariat.local / changer-ce-mot-de-passe');
 dire('(changez le mot de passe apres la premiere connexion : menu Utilisateurs)');
 dire('');
 dire('Pour lancer l\'application : double-cliquez sur demarrer.bat');

@@ -21,7 +21,7 @@
 <body>
     <div class="carte">
         <h1>{{ $vicariatNom }}</h1>
-        <div class="sous">Gestion paroissiale et vicariale</div>
+        <div class="sous">Vicariat Christ-Roi de Koundoul Ngama</div>
 
         @if ($errors->any())
             <div class="erreur">{{ $errors->first() }}</div>
