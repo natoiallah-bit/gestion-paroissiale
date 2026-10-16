@@ -296,4 +296,21 @@ class Ressources
 
         return $donnees;
     }
+
+    /** Description envoyée telle quelle aux applications (même source que le site) */
+    public static function pourApplication(): string
+    {
+        $ressources = [];
+        foreach (self::toutes() as $cle => $def) {
+            unset($def['modele']);
+            $ressources[$cle] = $def;
+        }
+
+        return json_encode([
+            'ressources' => $ressources,
+            'sacrements' => self::SACREMENTS,
+            'categories_recettes' => self::CATEGORIES_RECETTES,
+            'categories_depenses' => self::CATEGORIES_DEPENSES,
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."\n";
+    }
 }

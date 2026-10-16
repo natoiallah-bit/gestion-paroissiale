@@ -24,7 +24,7 @@ export function Connexion({ onConnecte }) {
       }
       setEtape('Connexion…');
       await seConnecter(f);
-      setEtape('Téléchargement des données de la boutique…');
+      setEtape('Téléchargement des données…');
       await synchroniser();
       onConnecte();
     } catch (err) {
@@ -37,11 +37,11 @@ export function Connexion({ onConnecte }) {
     <div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--vert-950); padding:16px">
       <form class="carte" style="width:100%; max-width:390px; padding:28px" onSubmit={valider}>
         <h1 style="text-align:center; margin-bottom:4px">Gestion Paroissiale</h1>
-        <p class="aide" style="text-align:center; margin-bottom:12px">Connectez cet appareil à votre boutique. Le serveur doit être joignable cette première fois ; ensuite l'application marche aussi sans connexion.</p>
+        <p class="aide" style="text-align:center; margin-bottom:12px">Connectez cet appareil au serveur de votre paroisse ou de votre vicariat. Le serveur doit être joignable cette première fois ; ensuite l'application marche aussi sans connexion.</p>
         {erreur && <div class="alerte alerte-erreur">{erreur}</div>}
         <label>Adresse du serveur</label>
         <input type="text" inputMode="url" placeholder="192.168.1.20:8200" required {...champ('serveur')} autocapitalize="off" />
-        <div class="aide">L'adresse affichée sur l'ordinateur de la boutique (page Appareils, ou fenêtre de demarrer.bat).</div>
+        <div class="aide">L'adresse affichée sur l'ordinateur de la paroisse (page Appareils, ou fenêtre de demarrer.bat).</div>
         <label>E-mail</label>
         <input type="email" required {...champ('email')} autocapitalize="off" />
         <label>Mot de passe</label>

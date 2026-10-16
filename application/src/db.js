@@ -1,26 +1,28 @@
 import Dexie from 'dexie';
+import { RESSOURCES } from './ressources.js';
 
 // Base locale : tout fonctionne sans connexion, le serveur est mis à jour à la synchronisation.
 export const db = new Dexie('gestion-paroissiale');
 
-db.version(1).stores({
+const tables = {
   reglages: 'cle',
-  boutique: 'uuid',
+  vicariat: 'uuid',
   utilisateurs: 'uuid',
-  categories: 'uuid, nom',
-  fournisseurs: 'uuid, nom',
-  produits: 'uuid, nom, code, categorie_uuid',
-  clients: 'uuid, nom',
-  ventes: 'uuid, created_at, client_uuid, statut',
-  remboursements: 'uuid, client_uuid, created_at',
-  depenses: 'uuid, date_depense',
   // Opérations faites ici et pas encore envoyées au serveur
   envois: '++id, table, uuid',
   // Opérations refusées par le serveur, affichées dans l'écran Synchronisation
   rejets: '++id',
-});
+};
+for (const [cle, def] of Object.entries(RESSOURCES)) {
+  const index = new Set(['uuid']);
+  for (const c of def.champs) {
+    if (c.type === 'ref' || c.type === 'date' || ['nom', 'titre', 'type', 'statut', 'sens'].includes(c.nom)) index.add(c.nom);
+  }
+  tables[cle] = [...index].join(', ');
+}
+db.version(1).stores(tables);
 
-export const TABLES_DONNEES = ['boutique', 'utilisateurs', 'categories', 'fournisseurs', 'produits', 'clients', 'ventes', 'remboursements', 'depenses'];
+export const TABLES_DONNEES = ['vicariat', 'utilisateurs', ...Object.keys(RESSOURCES)];
 
 export async function lire(cle, defaut = null) {
   const r = await db.reglages.get(cle);

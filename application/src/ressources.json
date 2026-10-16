@@ -1,0 +1,671 @@
+{
+    "ressources": {
+        "paroisses": {
+            "libelle": "Paroisses",
+            "singulier": "paroisse",
+            "article": "une",
+            "portee": "aucune",
+            "lecture": [
+                "admin",
+                "secretaire",
+                "tresorier"
+            ],
+            "ecriture": [
+                "admin"
+            ],
+            "tri": "nom",
+            "recherche": [
+                "nom",
+                "localite",
+                "cure"
+            ],
+            "champs": [
+                {
+                    "nom": "nom",
+                    "label": "Nom de la paroisse",
+                    "type": "texte",
+                    "requis": true,
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "localite",
+                    "label": "Localité",
+                    "type": "texte",
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "cure",
+                    "label": "Curé",
+                    "type": "texte",
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "telephone",
+                    "label": "Téléphone",
+                    "type": "tel",
+                    "max": 30
+                },
+                {
+                    "nom": "adresse",
+                    "label": "Adresse",
+                    "type": "texte",
+                    "max": 255
+                }
+            ],
+            "liees": [
+                {
+                    "ressource": "cebs",
+                    "cle": "paroisse_uuid",
+                    "titre": "CEB de la paroisse"
+                },
+                {
+                    "ressource": "mouvements",
+                    "cle": "paroisse_uuid",
+                    "titre": "Mouvements et services"
+                }
+            ]
+        },
+        "cebs": {
+            "libelle": "CEB",
+            "singulier": "CEB",
+            "article": "une",
+            "sous_titre": "Communautés ecclésiales de base",
+            "portee": "obligatoire",
+            "lecture": [
+                "admin",
+                "secretaire",
+                "tresorier"
+            ],
+            "ecriture": [
+                "admin",
+                "secretaire"
+            ],
+            "tri": "nom",
+            "recherche": [
+                "nom",
+                "quartier",
+                "responsable"
+            ],
+            "champs": [
+                {
+                    "nom": "paroisse_uuid",
+                    "label": "Paroisse",
+                    "type": "ref",
+                    "ref": "paroisses",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "nom",
+                    "label": "Nom de la CEB",
+                    "type": "texte",
+                    "requis": true,
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "quartier",
+                    "label": "Quartier / secteur",
+                    "type": "texte",
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "responsable",
+                    "label": "Responsable",
+                    "type": "texte",
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "telephone",
+                    "label": "Téléphone",
+                    "type": "tel",
+                    "max": 30
+                }
+            ],
+            "liees": [
+                {
+                    "ressource": "fideles",
+                    "cle": "ceb_uuid",
+                    "titre": "Fidèles de la CEB"
+                }
+            ],
+            "compte": {
+                "fideles": "ceb_uuid"
+            }
+        },
+        "mouvements": {
+            "libelle": "Mouvements et services",
+            "singulier": "mouvement ou service",
+            "article": "un",
+            "portee": "facultative",
+            "lecture": [
+                "admin",
+                "secretaire",
+                "tresorier"
+            ],
+            "ecriture": [
+                "admin",
+                "secretaire"
+            ],
+            "tri": "nom",
+            "recherche": [
+                "nom",
+                "responsable"
+            ],
+            "champs": [
+                {
+                    "nom": "paroisse_uuid",
+                    "label": "Paroisse",
+                    "type": "ref",
+                    "ref": "paroisses",
+                    "liste": true,
+                    "aide": "Vide = mouvement de tout le vicariat."
+                },
+                {
+                    "nom": "nom",
+                    "label": "Nom",
+                    "type": "texte",
+                    "requis": true,
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "type",
+                    "label": "Genre",
+                    "type": "choix",
+                    "requis": true,
+                    "liste": true,
+                    "options": {
+                        "mouvement": "Mouvement",
+                        "service": "Service"
+                    }
+                },
+                {
+                    "nom": "responsable",
+                    "label": "Responsable",
+                    "type": "texte",
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "telephone",
+                    "label": "Téléphone",
+                    "type": "tel",
+                    "max": 30
+                },
+                {
+                    "nom": "nombre_membres",
+                    "label": "Nombre de membres",
+                    "type": "entier",
+                    "requis": true,
+                    "liste": true,
+                    "defaut": 0
+                },
+                {
+                    "nom": "note",
+                    "label": "Note",
+                    "type": "long",
+                    "max": 1000
+                }
+            ]
+        },
+        "fideles": {
+            "libelle": "Fidèles",
+            "singulier": "fidèle",
+            "article": "un",
+            "portee": "obligatoire",
+            "lecture": [
+                "admin",
+                "secretaire"
+            ],
+            "ecriture": [
+                "admin",
+                "secretaire"
+            ],
+            "tri": "nom",
+            "recherche": [
+                "nom",
+                "prenoms",
+                "telephone",
+                "famille"
+            ],
+            "champs": [
+                {
+                    "nom": "paroisse_uuid",
+                    "label": "Paroisse",
+                    "type": "ref",
+                    "ref": "paroisses",
+                    "requis": true
+                },
+                {
+                    "nom": "ceb_uuid",
+                    "label": "CEB",
+                    "type": "ref",
+                    "ref": "cebs",
+                    "liste": true,
+                    "meme_paroisse": true
+                },
+                {
+                    "nom": "nom",
+                    "label": "Nom",
+                    "type": "texte",
+                    "requis": true,
+                    "max": 100,
+                    "liste": true
+                },
+                {
+                    "nom": "prenoms",
+                    "label": "Prénoms",
+                    "type": "texte",
+                    "requis": true,
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "sexe",
+                    "label": "Sexe",
+                    "type": "choix",
+                    "requis": true,
+                    "liste": true,
+                    "options": {
+                        "M": "Masculin",
+                        "F": "Féminin"
+                    }
+                },
+                {
+                    "nom": "date_naissance",
+                    "label": "Date de naissance",
+                    "type": "date"
+                },
+                {
+                    "nom": "telephone",
+                    "label": "Téléphone",
+                    "type": "tel",
+                    "max": 30,
+                    "liste": true
+                },
+                {
+                    "nom": "profession",
+                    "label": "Profession",
+                    "type": "texte",
+                    "max": 120
+                },
+                {
+                    "nom": "famille",
+                    "label": "Famille / ménage",
+                    "type": "texte",
+                    "max": 150,
+                    "aide": "Même texte pour les membres d'une même famille (ex. Famille Koné)."
+                },
+                {
+                    "nom": "statut",
+                    "label": "Situation",
+                    "type": "choix",
+                    "requis": true,
+                    "liste": true,
+                    "defaut": "actif",
+                    "options": {
+                        "actif": "Actif",
+                        "decede": "Décédé",
+                        "transfere": "Transféré"
+                    }
+                },
+                {
+                    "nom": "note",
+                    "label": "Note",
+                    "type": "long",
+                    "max": 1000
+                }
+            ],
+            "liees": [
+                {
+                    "ressource": "sacrements",
+                    "cle": "fidele_uuid",
+                    "titre": "Sacrements reçus"
+                }
+            ]
+        },
+        "sacrements": {
+            "libelle": "Sacrements",
+            "singulier": "sacrement",
+            "article": "un",
+            "sous_titre": "Registres de baptême, communion, confirmation, mariage, obsèques",
+            "portee": "derivee",
+            "lecture": [
+                "admin",
+                "secretaire"
+            ],
+            "ecriture": [
+                "admin",
+                "secretaire"
+            ],
+            "tri": "-date_sacrement",
+            "recherche": [
+                "numero_registre",
+                "lieu",
+                "ministre"
+            ],
+            "champs": [
+                {
+                    "nom": "fidele_uuid",
+                    "label": "Fidèle",
+                    "type": "ref",
+                    "ref": "fideles",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "type",
+                    "label": "Sacrement",
+                    "type": "choix",
+                    "requis": true,
+                    "liste": true,
+                    "options": {
+                        "bapteme": "Baptême",
+                        "eucharistie": "Première communion",
+                        "confirmation": "Confirmation",
+                        "mariage": "Mariage",
+                        "obseques": "Obsèques"
+                    }
+                },
+                {
+                    "nom": "date_sacrement",
+                    "label": "Date",
+                    "type": "date",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "lieu",
+                    "label": "Lieu",
+                    "type": "texte",
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "ministre",
+                    "label": "Ministre (prêtre)",
+                    "type": "texte",
+                    "max": 150
+                },
+                {
+                    "nom": "parrain",
+                    "label": "Parrain / marraine / témoins",
+                    "type": "texte",
+                    "max": 255
+                },
+                {
+                    "nom": "conjoint",
+                    "label": "Conjoint (mariage)",
+                    "type": "texte",
+                    "max": 200
+                },
+                {
+                    "nom": "numero_registre",
+                    "label": "N° du registre",
+                    "type": "texte",
+                    "max": 60,
+                    "liste": true,
+                    "aide": "Numéro ou folio dans le registre papier."
+                },
+                {
+                    "nom": "note",
+                    "label": "Note",
+                    "type": "long",
+                    "max": 1000
+                }
+            ]
+        },
+        "operations": {
+            "libelle": "Finances",
+            "singulier": "opération",
+            "article": "une",
+            "sous_titre": "Quêtes, denier du culte, intentions de messe, dépenses",
+            "portee": "obligatoire",
+            "lecture": [
+                "admin",
+                "tresorier"
+            ],
+            "ecriture": [
+                "admin",
+                "tresorier"
+            ],
+            "tri": "-date_operation",
+            "recherche": [
+                "libelle",
+                "categorie"
+            ],
+            "champs": [
+                {
+                    "nom": "paroisse_uuid",
+                    "label": "Paroisse",
+                    "type": "ref",
+                    "ref": "paroisses",
+                    "requis": true
+                },
+                {
+                    "nom": "sens",
+                    "label": "Sens",
+                    "type": "choix",
+                    "requis": true,
+                    "liste": true,
+                    "options": {
+                        "recette": "Recette",
+                        "depense": "Dépense"
+                    }
+                },
+                {
+                    "nom": "categorie",
+                    "label": "Catégorie",
+                    "type": "choix",
+                    "requis": true,
+                    "liste": true,
+                    "options": {
+                        "Quête": "Quête",
+                        "Denier du culte": "Denier du culte",
+                        "Intention de messe": "Intention de messe",
+                        "Don": "Don",
+                        "Offrande de sacrement": "Offrande de sacrement",
+                        "Autre recette": "Autre recette",
+                        "Entretien / travaux": "Entretien / travaux",
+                        "Électricité / eau": "Électricité / eau",
+                        "Salaires et indemnités": "Salaires et indemnités",
+                        "Liturgie et culte": "Liturgie et culte",
+                        "Transport": "Transport",
+                        "Aide aux familles": "Aide aux familles",
+                        "Contribution au diocèse": "Contribution au diocèse",
+                        "Autre dépense": "Autre dépense"
+                    }
+                },
+                {
+                    "nom": "libelle",
+                    "label": "Libellé",
+                    "type": "texte",
+                    "requis": true,
+                    "max": 200,
+                    "liste": true
+                },
+                {
+                    "nom": "montant",
+                    "label": "Montant (FCFA)",
+                    "type": "montant",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "date_operation",
+                    "label": "Date",
+                    "type": "date",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "note",
+                    "label": "Note",
+                    "type": "long",
+                    "max": 1000
+                }
+            ]
+        },
+        "annonces": {
+            "libelle": "Annonces",
+            "singulier": "annonce",
+            "article": "une",
+            "portee": "facultative",
+            "lecture": [
+                "admin",
+                "secretaire",
+                "tresorier"
+            ],
+            "ecriture": [
+                "admin",
+                "secretaire"
+            ],
+            "tri": "-date_debut",
+            "recherche": [
+                "titre",
+                "contenu"
+            ],
+            "champs": [
+                {
+                    "nom": "paroisse_uuid",
+                    "label": "Paroisse",
+                    "type": "ref",
+                    "ref": "paroisses",
+                    "liste": true,
+                    "aide": "Vide = annonce pour tout le vicariat."
+                },
+                {
+                    "nom": "titre",
+                    "label": "Titre",
+                    "type": "texte",
+                    "requis": true,
+                    "max": 200,
+                    "liste": true
+                },
+                {
+                    "nom": "contenu",
+                    "label": "Texte de l'annonce",
+                    "type": "long",
+                    "requis": true,
+                    "max": 5000
+                },
+                {
+                    "nom": "date_debut",
+                    "label": "Publiée le",
+                    "type": "date",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "date_fin",
+                    "label": "Valable jusqu'au",
+                    "type": "date",
+                    "liste": true,
+                    "aide": "Vide = sans limite."
+                }
+            ]
+        },
+        "activites": {
+            "libelle": "Programme des activités",
+            "singulier": "activité",
+            "article": "une",
+            "sous_titre": "Vie vicariale et paroissiale",
+            "portee": "facultative",
+            "lecture": [
+                "admin",
+                "secretaire",
+                "tresorier"
+            ],
+            "ecriture": [
+                "admin",
+                "secretaire"
+            ],
+            "tri": "date_activite",
+            "recherche": [
+                "titre",
+                "lieu"
+            ],
+            "champs": [
+                {
+                    "nom": "paroisse_uuid",
+                    "label": "Paroisse",
+                    "type": "ref",
+                    "ref": "paroisses",
+                    "liste": true,
+                    "aide": "Vide = activité de tout le vicariat."
+                },
+                {
+                    "nom": "titre",
+                    "label": "Activité",
+                    "type": "texte",
+                    "requis": true,
+                    "max": 200,
+                    "liste": true
+                },
+                {
+                    "nom": "date_activite",
+                    "label": "Date",
+                    "type": "date",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "heure",
+                    "label": "Heure",
+                    "type": "heure",
+                    "liste": true
+                },
+                {
+                    "nom": "lieu",
+                    "label": "Lieu",
+                    "type": "texte",
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "mouvement_uuid",
+                    "label": "Organisée par",
+                    "type": "ref",
+                    "ref": "mouvements"
+                },
+                {
+                    "nom": "description",
+                    "label": "Détails",
+                    "type": "long",
+                    "max": 2000
+                }
+            ]
+        }
+    },
+    "sacrements": {
+        "bapteme": "Baptême",
+        "eucharistie": "Première communion",
+        "confirmation": "Confirmation",
+        "mariage": "Mariage",
+        "obseques": "Obsèques"
+    },
+    "categories_recettes": [
+        "Quête",
+        "Denier du culte",
+        "Intention de messe",
+        "Don",
+        "Offrande de sacrement",
+        "Autre recette"
+    ],
+    "categories_depenses": [
+        "Entretien / travaux",
+        "Électricité / eau",
+        "Salaires et indemnités",
+        "Liturgie et culte",
+        "Transport",
+        "Aide aux familles",
+        "Contribution au diocèse",
+        "Autre dépense"
+    ]
+}

@@ -1,5 +1,6 @@
 import { appeler, ErreurReseau, ErreurSession } from './api.js';
 import { db, ecrire, lire, TABLES_DONNEES } from './db.js';
+import { CLES } from './ressources.js';
 import { lireSession } from './session.js';
 
 /**
@@ -25,19 +26,14 @@ function changerEtat(modif) {
   abonnes.forEach((f) => f(etat));
 }
 
-// Tables envoyées dans l'ordre attendu par le serveur ; pour les fiches, seule la dernière version compte
-const FICHES = ['categories', 'fournisseurs', 'clients', 'produits', 'depenses'];
-
+// Pour chaque fiche, seule la dernière version compte ; les tables partent dans l'ordre des
+// dépendances (paroisse → CEB → fidèle → sacrement), comme le serveur les traite.
 export function regrouper(envois) {
   const changements = {};
-  for (const e of envois) {
-    (changements[e.table] ||= []).push(e.donnees);
-  }
-  for (const t of FICHES) {
-    if (!changements[t]) continue;
+  for (const cle of CLES) {
     const parUuid = new Map();
-    for (const d of changements[t]) parUuid.set(d.uuid, d);
-    changements[t] = [...parUuid.values()];
+    for (const e of envois) if (e.table === cle) parUuid.set(e.donnees.uuid, e.donnees);
+    if (parUuid.size) changements[cle] = [...parUuid.values()];
   }
   return changements;
 }
@@ -65,6 +61,11 @@ async function executer() {
     do {
       reponse = await appeler(session.serveur, '/api/synchroniser', { depuis, changements }, session.jeton, 60000);
       await appliquer(reponse, changements === null ? [] : envois);
+      // Une fiche refusée par le serveur ne doit pas rester modifiée ici : on retélécharge tout
+      if (reponse.rejets?.length && changements !== null) {
+        reponse = { ...reponse, revision: 0, encore: true };
+        await ecrire('revision', 0);
+      }
       depuis = reponse.revision;
       changements = null; // les envois ne partent qu'avec le premier morceau
     } while (reponse.encore);
@@ -92,18 +93,19 @@ export async function appliquer(reponse, envoisTraites) {
       for (const r of reponse.rejets || []) {
         const envoi = envoisTraites.find((e) => e.table === r.table && (e.uuid === r.uuid));
         await db.rejets.add({ ...r, date: new Date().toISOString(), donnees: envoi?.donnees ?? null });
-        // Une vente refusée n'existe pas sur le serveur : on la retire aussi d'ici
-        if (r.table === 'ventes') await db.ventes.delete(r.uuid);
+        // Une fiche créée ici et refusée n'existe pas sur le serveur : on la retire aussi d'ici
+        if (CLES.includes(r.table) && r.uuid) {
+          const locale = await db.table(r.table).get(r.uuid);
+          if (locale?._local) await db.table(r.table).delete(r.uuid);
+        }
       }
     }
 
     for (const [table, lignes] of Object.entries(reponse.donnees || {})) {
-      // Dates au même format que celles créées ici, pour que les recherches par période marchent
-      for (const l of lignes) if (l.created_at) l.created_at = new Date(l.created_at).toISOString();
       if (lignes.length) await db.table(table).bulkPut(lignes);
     }
     for (const s of reponse.suppressions || []) {
-      const table = s.table_nom === 'users' ? 'utilisateurs' : s.table_nom;
+      const table = s.table_nom === 'users' ? 'utilisateurs' : s.table_nom === 'vicariat' ? 'vicariat' : s.table_nom;
       if (TABLES_DONNEES.includes(table)) await db.table(table).delete(s.uuid);
     }
     await db.reglages.put({ cle: 'revision', valeur: reponse.revision });

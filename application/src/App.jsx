@@ -3,40 +3,33 @@ import { useContext, useEffect, useState } from 'preact/hooks';
 import { useEtatSync, useRequete } from './crochets.js';
 import { db } from './db.js';
 import { ilYa } from './format.js';
-import { estGerant, lireSession } from './session.js';
+import { peutLire, RESSOURCES } from './ressources.js';
+import { lireSession } from './session.js';
 import { demarrerAuto, synchroniser } from './sync.js';
 import { Accueil } from './ecrans/Accueil.jsx';
-import { Caisse } from './ecrans/Caisse.jsx';
-import { Clients, ClientDetail, ClientForm } from './ecrans/Clients.jsx';
 import { Connexion } from './ecrans/Connexion.jsx';
-import { Depenses } from './ecrans/Depenses.jsx';
-import { EntreeStock, ProduitDetail, ProduitForm, Produits } from './ecrans/Produits.jsx';
+import { Extrait } from './ecrans/Extrait.jsx';
+import { Fiche } from './ecrans/Fiche.jsx';
+import { Formulaire } from './ecrans/Formulaire.jsx';
+import { Liste } from './ecrans/Liste.jsx';
+import { Plus } from './ecrans/Plus.jsx';
 import { Synchro } from './ecrans/Synchro.jsx';
-import { Ticket, VenteDetail, Ventes } from './ecrans/Ventes.jsx';
 
 const Contexte = createContext(null);
 export const useApp = () => useContext(Contexte);
 
-const ECRANS = {
-  accueil: Accueil, caisse: Caisse, ventes: Ventes, vente: VenteDetail, ticket: Ticket,
-  clients: Clients, client: ClientDetail, clientForm: ClientForm,
-  produits: Produits, produit: ProduitDetail, produitForm: ProduitForm, entree: EntreeStock,
-  depenses: Depenses, synchro: Synchro,
-};
+const ECRANS = { accueil: Accueil, liste: Liste, fiche: Fiche, formulaire: Formulaire, extrait: Extrait, plus: Plus, synchro: Synchro };
 
-const MENU = [
-  { ecran: 'accueil', ico: '▦', texte: 'Accueil', gerant: true },
-  { ecran: 'caisse', ico: '🛒', texte: 'Caisse' },
-  { ecran: 'ventes', ico: '🧾', texte: 'Ventes' },
-  { ecran: 'clients', ico: '👥', texte: 'Clients' },
-  { ecran: 'produits', ico: '📦', texte: 'Produits', gerant: true },
-  { ecran: 'depenses', ico: '💸', texte: 'Dépenses', gerant: true },
-  { ecran: 'synchro', ico: '⟳', texte: 'Synchro' },
-];
+const ICONES = { fideles: '👥', cebs: '🏘', mouvements: '🤝', sacrements: '✝', annonces: '📢', activites: '📅', operations: '💰', paroisses: '⛪' };
+// Ordre du menu de l'ordinateur ; le titre court sert à la barre du bas (téléphone)
+const ORDRE = ['fideles', 'cebs', 'mouvements', 'sacrements', 'annonces', 'activites', 'operations', 'paroisses'];
+const COURT = { activites: 'Programme', operations: 'Finances', mouvements: 'Mouvements' };
+// Barre du bas : Accueil + les 3 premiers écrans autorisés + Menu
+const PRIORITE_MOBILE = ['fideles', 'sacrements', 'activites', 'operations'];
 
 export function App() {
   const [session, setSession] = useState(undefined);
-  const [page, setPage] = useState({ nom: 'caisse', params: {} });
+  const [page, setPage] = useState({ nom: 'accueil', params: {} });
   const [message, setMessage] = useState(null);
 
   const recharger = async () => {
@@ -46,19 +39,14 @@ export function App() {
   };
 
   useEffect(() => {
-    recharger().then((s) => {
-      if (s) {
-        if (estGerant(s)) setPage({ nom: 'accueil', params: {} });
-        demarrerAuto();
-      }
-    });
+    recharger().then((s) => { if (s) demarrerAuto(); });
   }, []);
 
   if (session === undefined) return null;
   if (!session) {
     return <Connexion onConnecte={async () => {
-      const s = await recharger();
-      setPage({ nom: estGerant(s) ? 'accueil' : 'caisse', params: {} });
+      await recharger();
+      setPage({ nom: 'accueil', params: {} });
       demarrerAuto();
     }} />;
   }
@@ -69,18 +57,32 @@ export function App() {
     window.scrollTo(0, 0);
   };
 
-  const Ecran = ECRANS[page.nom] || Caisse;
-  const gerant = estGerant(session);
-  const menu = MENU.filter((m) => !m.gerant || gerant);
-  const actif = (m) => page.nom === m.ecran || page.nom.startsWith(m.ecran.replace(/s$/, ''));
+  const Ecran = ECRANS[page.nom] || Accueil;
+  const role = session.utilisateur.role;
+  const autorises = ORDRE.filter((cle) => peutLire(role, cle));
+  const menu = [
+    { id: 'accueil', ico: '▦', texte: 'Accueil', va: ['accueil'] },
+    ...autorises.map((cle) => ({ id: cle, ico: ICONES[cle], texte: RESSOURCES[cle].libelle, court: COURT[cle] || RESSOURCES[cle].libelle, va: ['liste', cle] })),
+    { id: 'synchro', ico: '⟳', texte: 'Synchro', va: ['synchro'] },
+  ];
+  const actif = (m) => {
+    const cleCourante = page.params.cle;
+    if (m.id === 'accueil') return page.nom === 'accueil';
+    if (m.id === 'synchro') return page.nom === 'synchro';
+    if (page.nom === 'extrait') return m.id === 'sacrements';
+    return cleCourante === m.id;
+  };
+  const ouvrir = (m) => (m.id === 'accueil' ? naviguer('accueil') : m.id === 'synchro' ? naviguer('synchro') : naviguer('liste', { cle: m.id }));
+  const mobile = [menu[0], ...PRIORITE_MOBILE.filter((c) => autorises.includes(c)).slice(0, 3).map((c) => menu.find((m) => m.id === c)),
+    { id: 'plus', ico: '☰', court: 'Menu', texte: 'Menu' }];
 
   return (
-    <Contexte.Provider value={{ session, naviguer, recharger, gerant }}>
+    <Contexte.Provider value={{ session, naviguer, recharger }}>
       <div class="app">
         <nav class="menu">
-          <div class="marque"><NomBoutique /><span>Gestion paroissiale</span></div>
+          <div class="marque"><NomVicariat /><span>Gestion paroissiale</span></div>
           {menu.map((m) => (
-            <button key={m.ecran} class={'lien' + (actif(m) ? ' actif' : '')} onClick={() => naviguer(m.ecran)}>
+            <button key={m.id} class={'lien' + (actif(m) ? ' actif' : '')} onClick={() => ouvrir(m)}>
               <span class="ico">{m.ico}</span>{m.texte}
             </button>
           ))}
@@ -90,14 +92,15 @@ export function App() {
           </div>
         </nav>
         <main>
-          <div class="haut-mobile"><b><NomBoutique /></b><PastilleSync court /></div>
+          <div class="haut-mobile"><b><NomVicariat /></b><PastilleSync court /></div>
           {message && <div class="alerte alerte-succes">{message}</div>}
           <Ecran key={page.nom + JSON.stringify(page.params)} {...page.params} />
         </main>
         <nav class="onglets">
-          {menu.map((m) => (
-            <button key={m.ecran} class={actif(m) ? 'actif' : ''} onClick={() => naviguer(m.ecran)}>
-              <span class="ico">{m.ico}</span>{m.texte}
+          {mobile.map((m) => (
+            <button key={m.id} class={(m.id === 'plus' ? page.nom === 'plus' : actif(m)) ? 'actif' : ''}
+              onClick={() => (m.id === 'plus' ? naviguer('plus') : ouvrir(m))}>
+              <span class="ico">{m.ico}</span>{m.court || m.texte}
             </button>
           ))}
         </nav>
@@ -106,9 +109,9 @@ export function App() {
   );
 }
 
-function NomBoutique() {
-  const boutique = useRequete(() => db.boutique.toCollection().first(), []);
-  return <b>{boutique?.nom || 'Ma Boutique'}</b>;
+function NomVicariat() {
+  const vicariat = useRequete(() => db.vicariat.toCollection().first(), []);
+  return <b>{vicariat?.nom || 'Vicariat'}</b>;
 }
 
 export function PastilleSync({ court }) {

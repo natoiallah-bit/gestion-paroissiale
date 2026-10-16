@@ -1,4 +1,6 @@
-export const fcfa = (n) => new Intl.NumberFormat('fr-FR').format(Math.round(n || 0)).replace(/ | /g, ' ') + ' F';
+export const fcfa = (n) => new Intl.NumberFormat('fr-FR').format(Math.round(n || 0)).replace(/[  ]/g, ' ') + ' F';
+
+export const nombre = (n) => new Intl.NumberFormat('fr-FR').format(Math.round(n || 0)).replace(/[  ]/g, ' ');
 
 export const dateHeure = (iso) => {
   if (!iso) return '';
@@ -13,10 +15,6 @@ export const jourLocal = (d = new Date()) => {
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
-
-export const MODES = { especes: 'Espèces', mobile_money: 'Mobile money' };
-
-export const CATEGORIES_DEPENSES = ['Loyer', 'Électricité / eau', 'Transport', 'Salaires', 'Achat marchandise', 'Taxes', 'Téléphone / internet', 'Autre'];
 
 export const ilYa = (iso) => {
   if (!iso) return 'jamais';

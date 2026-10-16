@@ -44,8 +44,8 @@ export async function seDeconnecter() {
 export async function viderDonnees() {
   await db.transaction('rw', [...TABLES_DONNEES, 'envois', 'rejets', 'reglages'].map((t) => db.table(t)), async () => {
     for (const t of [...TABLES_DONNEES, 'envois', 'rejets']) await db.table(t).clear();
-    await db.reglages.bulkDelete(['revision', 'derniere_synchro', 'compteur_ticket']);
+    await db.reglages.bulkDelete(['revision', 'derniere_synchro']);
   });
 }
 
-export const estGerant = (session) => session?.utilisateur?.role === 'gerant';
+export const estAdmin = (session) => session?.utilisateur?.role === 'admin';

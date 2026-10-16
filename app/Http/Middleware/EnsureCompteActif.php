@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureCompteActif
 {
-    // Un compte désactivé par le gérant est déconnecté à sa prochaine action
+    // Un compte désactivé par l'administrateur est déconnecté à sa prochaine action
     public function handle(Request $request, Closure $next): Response
     {
         if ($request->user() && ! $request->user()->actif) {

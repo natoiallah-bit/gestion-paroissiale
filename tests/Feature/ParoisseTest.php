@@ -7,6 +7,7 @@ use App\Models\Fidele;
 use App\Models\Paroisse;
 use App\Models\Sacrement;
 use App\Models\User;
+use App\Support\Ressources;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -163,5 +164,14 @@ class ParoisseTest extends TestCase
         $this->actingAs($admin)->post('/users', [
             'name' => 'Sec', 'email' => 's@x.ci', 'role' => 'secretaire', 'password' => 'motdepasse1', 'password_confirmation' => 'motdepasse1',
         ])->assertSessionHasErrors('paroisse_id');
+    }
+
+    public function test_la_description_des_fiches_de_l_application_est_a_jour(): void
+    {
+        $this->assertSame(
+            Ressources::pourApplication(),
+            file_get_contents(base_path('application/src/ressources.json')),
+            'Lancez : php artisan paroisse:ressources',
+        );
     }
 }

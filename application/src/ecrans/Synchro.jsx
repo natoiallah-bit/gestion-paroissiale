@@ -6,7 +6,9 @@ import { dateHeure, ilYa } from '../format.js';
 import { seDeconnecter } from '../session.js';
 import { synchroniser } from '../sync.js';
 
-const LIBELLES = { ventes: 'Vente', clients: 'Client', remboursements: 'Remboursement', produits: 'Produit', mouvements: 'Mouvement de stock', annulations: 'Annulation', depenses: 'Dépense', categories: 'Catégorie', fournisseurs: 'Fournisseur' };
+import { RESSOURCES } from '../ressources.js';
+
+const LIBELLES = Object.fromEntries(Object.entries(RESSOURCES).map(([cle, def]) => [cle, def.libelle]));
 
 export function Synchro() {
   const { session, recharger } = useApp();
@@ -60,8 +62,8 @@ export function Synchro() {
       <div class="carte" style="margin-top:16px">
         <h2>Cet appareil</h2>
         <p>Serveur : <b>{session.serveur}</b></p>
-        <p>Connecté : <b>{session.utilisateur.nom}</b> ({session.utilisateur.role === 'gerant' ? 'Gérant' : 'Vendeur'})</p>
-        <p>Appareil : <b>{session.appareil.nom}</b> — code <b>{session.appareil.code}</b> (préfixe des tickets)</p>
+        <p>Connecté : <b>{session.utilisateur.nom}</b> ({{ admin: 'Administrateur', secretaire: 'Secrétaire', tresorier: 'Trésorier' }[session.utilisateur.role] || session.utilisateur.role})</p>
+        <p>Appareil : <b>{session.appareil.nom}</b> — code <b>{session.appareil.code}</b></p>
         <button class="btn btn-leger" style="margin-top:10px" onClick={deconnecter}>Se déconnecter</button>
       </div>
     </>

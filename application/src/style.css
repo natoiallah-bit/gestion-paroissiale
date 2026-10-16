@@ -83,29 +83,6 @@ input:focus, select:focus, textarea:focus{ outline:2px solid var(--ambre-500); b
 .actions{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
 .formulaire{ max-width:620px; }
 
-/* Caisse */
-.caisse{ display:grid; grid-template-columns:minmax(0,1fr) 370px; gap:16px; align-items:start; }
-.catalogue{ display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:9px; margin-top:10px; }
-.tuile{ background:#fff; border:1px solid var(--ligne); border-radius:9px; padding:10px; text-align:left; cursor:pointer; }
-.tuile:active{ transform:scale(.98); }
-.tuile:hover{ border-color:var(--ambre-500); }
-.tuile .nom{ font-weight:600; min-height:34px; }
-.tuile .prix{ font-weight:700; color:var(--vert-800); margin-top:5px; }
-.tuile .stk{ font-size:11.5px; color:var(--doux); }
-.tuile.epuise{ opacity:.5; }
-.panier{ position:sticky; top:14px; }
-.qte{ display:flex; align-items:center; gap:4px; }
-.qte button{ width:30px; height:30px; border:1px solid var(--ligne); background:#fff; border-radius:6px; cursor:pointer; font-weight:700; font-size:15px; }
-.qte input{ width:52px; text-align:center; padding:5px; }
-.total-gros{ font-size:28px; font-weight:700; text-align:right; margin:10px 0 2px; font-variant-numeric:tabular-nums; }
-.resume{ display:flex; justify-content:space-between; margin-top:6px; }
-.barre-panier{ display:none; }
-
-/* Ticket */
-.ticket{ width:80mm; max-width:100%; margin:0 auto 16px; background:#fff; padding:12px 10px; font-family:'Courier New', monospace; font-size:12.5px; color:#000; border:1px solid var(--ligne); }
-.ticket .c{ text-align:center; } .ticket hr{ border:none; border-top:1px dashed #000; margin:7px 0; }
-.ticket td{ padding:1px 0; border:none; } .ticket .g{ font-weight:bold; }
-
 /* Mobile : menu en bas */
 .onglets{ display:none; }
 @media (max-width:860px){
@@ -119,9 +96,6 @@ input:focus, select:focus, textarea:focus{ outline:2px solid var(--ambre-500); b
   .haut-mobile{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin:-14px -14px 12px; padding:10px 14px; padding-top:calc(10px + env(safe-area-inset-top)); background:var(--vert-950); color:#fff; }
   .haut-mobile .pastille-sync{ width:auto; }
   .deux-col{ grid-template-columns:1fr; }
-  .caisse{ grid-template-columns:1fr; }
-  .panier{ position:static; }
-  .barre-panier{ display:flex; position:fixed; left:0; right:0; bottom:calc(58px + env(safe-area-inset-bottom)); z-index:9; justify-content:space-between; align-items:center; background:var(--ambre-500); color:var(--vert-950); padding:11px 16px; font-weight:700; border:none; width:100%; font-size:15px; }
   h1{ font-size:19px; }
 }
 @media (min-width:861px){ .haut-mobile{ display:none; } }
@@ -129,5 +103,4 @@ input:focus, select:focus, textarea:focus{ outline:2px solid var(--ambre-500); b
   body{ background:#fff; }
   .menu, .onglets, .haut-mobile, .pas-imprimer{ display:none !important; }
   main{ padding:0; }
-  .ticket{ border:none; margin:0; width:auto; }
 }

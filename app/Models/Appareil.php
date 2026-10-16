@@ -26,7 +26,7 @@ class Appareil extends Model
         $appareil->nom = $nom;
         $appareil->user_id = $user->id;
         if (! $appareil->exists) {
-            // A1, A2… : court, pour rester lisible sur les tickets
+            // A1, A2… : court, identifie l'appareil dans la liste des appareils
             $appareil->code = 'A'.((int) static::max('id') + 1);
         }
         $appareil->save();
