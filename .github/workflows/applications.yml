@@ -1,0 +1,113 @@
+name: Applications Android et Windows
+
+# Fabrique l'application téléphone (.apk) et l'installateur Windows (.exe).
+# Les fichiers sont publiés dans « Releases » sous le numéro de version de
+# application/package.json (v1.0.0…) : changer ce numéro crée une nouvelle version,
+# sinon la version existante est mise à jour.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths: ['application/**', '.github/workflows/applications.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: application
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: application/package-lock.json
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+      - run: npm test
+      - run: npm run build
+
+  android:
+    needs: tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: application
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: application/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+      - run: npm run android
+      - name: Construire l'APK
+        working-directory: application/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../GestionParoissiale.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: application/GestionParoissiale.apk
+
+  windows:
+    needs: tests
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: application
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: application/package-lock.json
+      - run: npm ci
+      - run: npm run exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: application/dist-electron/*.exe
+
+  publication:
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        run: echo "tag=v$(node -p "require('./application/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          path: fichiers
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Gestion Paroissiale ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          files: fichiers/*
+          body: |
+            **Téléphone Android** : téléchargez `GestionParoissiale.apk` sur le téléphone et ouvrez-le
+            (autorisez « installer des applications inconnues » si Android le demande).
+
+            **Ordinateur Windows** : téléchargez `GestionParoissiale-Installation-….exe` et lancez-le.
+
+            Au premier lancement, indiquez l'adresse de votre serveur, votre e-mail et votre mot de passe.

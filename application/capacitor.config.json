@@ -1,0 +1,12 @@
+{
+  "appId": "com.gestionparoissiale.app",
+  "appName": "Gestion Paroissiale",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

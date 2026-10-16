@@ -1,0 +1,57 @@
+{
+  "name": "gestion-paroissiale-app",
+  "productName": "Gestion Paroissiale",
+  "version": "1.0.1",
+  "description": "Application de caisse hors ligne, synchronisée avec le serveur Gestion paroissiale",
+  "private": true,
+  "type": "module",
+  "main": "electron/main.cjs",
+  "author": "Gestion Paroissiale",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run",
+    "electron": "vite build && electron .",
+    "exe": "vite build && electron-builder --win nsis --x64 --publish never",
+    "android": "vite build && cap sync android"
+  },
+  "build": {
+    "appId": "com.gestionparoissiale.app",
+    "productName": "Gestion Paroissiale",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icone.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Gestion Paroissiale",
+      "artifactName": "GestionParoissiale-Installation-${version}.${ext}"
+    }
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/share": "^8.0.3",
+    "dexie": "^4.4.6",
+    "preact": "^11.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "@preact/preset-vite": "^2.10.6",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "fake-indexeddb": "^6.2.5",
+    "vite": "^8.3.3",
+    "vitest": "^5.0.3"
+  }
+}
