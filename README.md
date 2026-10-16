@@ -59,7 +59,8 @@ Compte administrateur créé par défaut : `admin@vicariat.local` / `changer-ce-
 2. **Secteurs** : créer les secteurs du vicariat.
 3. **Utilisateurs** : un secrétaire et un trésorier par secteur ; un trésorier **sans secteur** tient la caisse centrale du vicariat.
 4. Les secrétaires saisissent CEB, fidèles, sacrements, mouvements, pastorales, annonces et programme.
-5. Les trésoriers de secteur ouvrent les comptes des CEB (menu **Comptes et opérations**) et enregistrent les **dépôts au vicariat**.
+5. Les responsables de la catéchèse créent les catéchistes, les groupes de l'année pastorale, inscrivent les catéchumènes et notent les séances.
+6. Les trésoriers de secteur ouvrent les comptes des CEB (menu **Comptes et opérations**) et enregistrent les **dépôts au vicariat**.
 
 Pour essayer avec des données d'exemple : `php artisan db:seed --class=DemoSeeder`
 (comptes `secretaire.secteur1@vicariat.local`, `tresorier.secteur1@vicariat.local`, `tresorier.vicariat@vicariat.local`… / `demo1234`).
@@ -71,6 +72,8 @@ Pour essayer avec des données d'exemple : `php artisan db:seed --class=DemoSeed
 | **Administrateur** (vicariat) | Tout le vicariat : tous les secteurs, utilisateurs, appareils, paramètres, comptes consolidés |
 | **Secrétaire** (d'un secteur) | CEB, fidèles, mouvements, pastorales, sacrements, annonces, programme **de son secteur** ; lecture des annonces et activités du vicariat |
 | **Trésorier** (d'un secteur) | Comptes des CEB, opérations et dépôts **de son secteur** ; il ne voit ni les autres secteurs ni la caisse centrale |
+| **Responsable de la catéchèse** (d'un secteur) | Catéchistes, groupes, inscriptions et séances **de son secteur** ; lecture des fidèles et des sacrements |
+| **Coordination de la catéchèse** (compte sans secteur) | La catéchèse de tous les secteurs, en lecture et en saisie |
 | **Trésorier du vicariat** (compte sans secteur) | Comptes de tous les secteurs, dépôts reçus, caisse centrale, compilation du vicariat |
 
 Un compte rattaché à un secteur ne voit et ne modifie que ce secteur, sur le site comme dans l'application
@@ -83,12 +86,19 @@ Un compte rattaché à un secteur ne voit et ne modifie que ce secteur, sur le s
 | **Fidèles & familles** | Registre des paroissiens (identité, famille, CEB, situation actif / décédé / transféré), recherche, filtres |
 | **CEB** | Communautés ecclésiales de base par secteur, responsable, nombre de fidèles |
 | **Mouvements & pastorales** | Mouvements des jeunes, des adultes, pastorales, services : responsable et nombre de membres |
+| **Catéchèse** | Catéchistes, groupes par niveau et année pastorale, **inscriptions** des catéchumènes (un seul groupe par année), séances avec présence, résultats (inscrit, admis, ajourné, abandon) |
 | **Sacrements** | Baptême, première communion, confirmation, mariage, obsèques ; n° de registre ; **extrait de registre imprimable** |
 | **Comptes & opérations** | Compte de chaque CEB au conseil économique du secteur, compte du secteur, caisse centrale du vicariat ; cotisations, quêtes, dons, dépenses |
 | **Dépôts au vicariat** | Dépôt de chaque secteur à la caisse centrale ; cumul du secteur et total reçu recalculés à chaque dépôt |
 | **Annonces** | Pour un secteur ou pour tout le vicariat, avec période de validité |
 | **Programme** | Activités de la vie vicariale et paroissiale, avec date, heure, lieu, organisateur |
 | **Tableau de bord & rapports** | Effectifs (hommes / femmes / familles), sacrements de l'année, **compilation des comptes CEB → secteur → vicariat** (compilé, déposé, reste à déposer), vue par secteur |
+
+Règles de la catéchèse :
+- l'**année pastorale** va de septembre à août et s'écrit `2026-2027` ;
+- un catéchumène ne peut être inscrit que dans **un seul groupe par année pastorale**, dans le secteur de son groupe, et seul un fidèle **actif** peut être inscrit ;
+- quand le sacrement préparé par le niveau du groupe est enregistré (baptême, première communion, confirmation, mariage), l'inscription passe à **« admis »** ;
+- un groupe qui a des inscrits ou des séances, ou un fidèle inscrit à la catéchèse, ne peut pas être supprimé ; supprimer un catéchiste libère ses groupes.
 
 Règles contrôlées partout (site, application, synchronisation) :
 - baptême, première communion, confirmation et obsèques ne s'enregistrent **qu'une fois** par fidèle ;

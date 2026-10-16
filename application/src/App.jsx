@@ -21,12 +21,12 @@ export const useApp = () => useContext(Contexte);
 
 const ECRANS = { accueil: Accueil, comptes: Comptes, liste: Liste, fiche: Fiche, formulaire: Formulaire, extrait: Extrait, plus: Plus, synchro: Synchro };
 
-const ICONES = { fideles: '👥', cebs: '🏘', mouvements: '🤝', sacrements: '✝', annonces: '📢', activites: '📅', operations: '💰', depots: '🏦', secteurs: '⛪' };
+const ICONES = { fideles: '👥', cebs: '🏘', mouvements: '🤝', sacrements: '✝', annonces: '📢', activites: '📅', operations: '💰', depots: '🏦', secteurs: '⛪', groupes: '📖', inscriptions: '🧒', seances: '🗓', catechistes: '🧑‍🏫' };
 // Ordre du menu de l'ordinateur ; le titre court sert à la barre du bas (téléphone)
-const ORDRE = ['fideles', 'cebs', 'mouvements', 'sacrements', 'annonces', 'activites', 'operations', 'depots', 'secteurs'];
-const COURT = { activites: 'Programme', operations: 'Comptes', depots: 'Dépôts', mouvements: 'Mouvements' };
+const ORDRE = ['fideles', 'cebs', 'mouvements', 'sacrements', 'groupes', 'inscriptions', 'seances', 'catechistes', 'annonces', 'activites', 'operations', 'depots', 'secteurs'];
+const COURT = { activites: 'Programme', operations: 'Comptes', depots: 'Dépôts', mouvements: 'Mouvements', groupes: 'Catéchèse', inscriptions: 'Inscrits', seances: 'Séances', catechistes: 'Catéchistes' };
 // Barre du bas : Accueil + les 3 premiers écrans autorisés + Menu
-const PRIORITE_MOBILE = ['fideles', 'sacrements', 'operations', 'depots', 'activites'];
+const PRIORITE_MOBILE = ['fideles', 'groupes', 'sacrements', 'operations', 'depots', 'activites'];
 
 export function App() {
   const [session, setSession] = useState(undefined);

@@ -13,11 +13,6 @@ class Sacrement extends Fiche
         return 'sacrements';
     }
 
-    protected function colonnesSupplementaires(): array
-    {
-        return ['secteur_id'];
-    }
-
     public function intitule(): string
     {
         return (Ressources::SACREMENTS[$this->type] ?? $this->type).' — '.($this->fidele?->nomComplet() ?? '?');

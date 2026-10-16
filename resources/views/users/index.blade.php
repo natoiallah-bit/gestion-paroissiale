@@ -23,5 +23,5 @@
         </tbody>
     </table>
 </div>
-<p class="aide">L'<b>administrateur</b> voit tout le vicariat. Le <b>secrétaire</b> gère fidèles, CEB, mouvements, sacrements, annonces et programme de son secteur. Le <b>trésorier</b> d'un secteur gère les comptes des CEB et les dépôts de son secteur ; sans secteur, il gère la caisse centrale du vicariat.</p>
+<p class="aide">L'<b>administrateur</b> voit tout le vicariat. Le <b>secrétaire</b> gère fidèles, CEB, mouvements, sacrements, annonces et programme de son secteur. Le <b>trésorier</b> d'un secteur gère les comptes des CEB et les dépôts de son secteur ; sans secteur, il gère la caisse centrale du vicariat. Le <b>responsable de la catéchèse</b> gère catéchistes, groupes, inscriptions et séances (de son secteur, ou de tout le vicariat s'il n'a pas de secteur).</p>
 @endsection

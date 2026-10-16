@@ -4,7 +4,7 @@ import { enregistrerFiche } from '../actions.js';
 import { useCartes, useRequete } from '../crochets.js';
 import { db } from '../db.js';
 import { jourLocal } from '../format.js';
-import { estLimite, intitule, RESSOURCES } from '../ressources.js';
+import { anneePastorale, estLimite, intitule, RESSOURCES } from '../ressources.js';
 
 export function Formulaire({ cle, uuid = null, valeurs: initiales = {} }) {
   const { session, naviguer } = useApp();
@@ -21,10 +21,14 @@ export function Formulaire({ cle, uuid = null, valeurs: initiales = {} }) {
   const courant = v ?? (() => {
     const base = {};
     for (const c of def.champs) base[c.nom] = existant?.[c.nom] ?? initiales[c.nom] ?? c.defaut ?? '';
-    if (!existant && cle === 'operations') base.date_operation = jourLocal();
-    if (!existant && cle === 'sacrements') base.date_sacrement = jourLocal();
-    if (!existant && cle === 'annonces') base.date_debut = jourLocal();
-    if (!existant && cle === 'activites') base.date_activite = jourLocal();
+    // Valeurs de départ : la date du jour pour une date obligatoire, l'année pastorale en cours
+    if (!existant) {
+      for (const c of def.champs) {
+        if (base[c.nom] !== '') continue;
+        if (c.type === 'date' && c.requis) base[c.nom] = jourLocal();
+        if (c.type === 'annee') base[c.nom] = anneePastorale();
+      }
+    }
     return base;
   })();
   const maj = (nom, valeur) => setV({ ...courant, [nom]: valeur });
@@ -84,6 +88,7 @@ export function Formulaire({ cle, uuid = null, valeurs: initiales = {} }) {
                 );
               })()}
               {c.type === 'date' && <input id={id} type="date" value={valeur} required={requis} onInput={(e) => maj(c.nom, e.target.value)} />}
+              {c.type === 'annee' && <input id={id} type="text" pattern="\d{4}-\d{4}" placeholder="2026-2027" maxLength="9" value={valeur} required={requis} onInput={(e) => maj(c.nom, e.target.value)} />}
               {c.type === 'heure' && <input id={id} type="time" value={valeur} onInput={(e) => maj(c.nom, e.target.value)} />}
               {(c.type === 'entier' || c.type === 'montant') && <input id={id} type="number" inputMode="numeric" min={c.type === 'montant' ? 1 : 0} step="1" value={valeur} required={requis} onInput={(e) => maj(c.nom, e.target.value)} />}
               {(c.type === 'texte' || c.type === 'tel') && <input id={id} type={c.type === 'tel' ? 'tel' : 'text'} maxLength={c.max || 255} value={valeur} required={requis} onInput={(e) => maj(c.nom, e.target.value)} />}

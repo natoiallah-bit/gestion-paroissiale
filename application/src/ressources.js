@@ -8,6 +8,13 @@ export const CLES = Object.keys(RESSOURCES);
 export const SACREMENTS = donnees.sacrements;
 export const CATEGORIES_RECETTES = donnees.categories_recettes;
 export const CATEGORIES_DEPENSES = donnees.categories_depenses;
+export const SACREMENT_PREPARE = donnees.sacrement_prepare;
+
+// Année pastorale d'une date : de septembre à août (2026-2027 pour octobre 2026)
+export function anneePastorale(date = new Date()) {
+  const debut = date.getMonth() + 1 >= 9 ? date.getFullYear() : date.getFullYear() - 1;
+  return `${debut}-${debut + 1}`;
+}
 
 export const peutLire = (role, cle) => RESSOURCES[cle].lecture.includes(role);
 export const peutEcrire = (role, cle) => RESSOURCES[cle].ecriture.includes(role);
@@ -34,6 +41,10 @@ export function intitule(cle, f, cartes = {}) {
   if (!f) return '—';
   if (cle === 'fideles') return `${f.prenoms} ${String(f.nom).toUpperCase()}`.trim();
   if (cle === 'sacrements') return `${SACREMENTS[f.type] || f.type} — ${intitule('fideles', cartes.fideles?.get(f.fidele_uuid))}`;
+  if (cle === 'catechistes') return `${f.prenoms} ${String(f.nom).toUpperCase()}`.trim();
+  if (cle === 'groupes') return `${f.nom} (${f.annee})`;
+  if (cle === 'inscriptions') return `${intitule('fideles', cartes.fideles?.get(f.fidele_uuid))} — ${cartes.groupes?.get(f.groupe_uuid)?.nom || '?'}`;
+  if (cle === 'seances') return `${cartes.groupes?.get(f.groupe_uuid)?.nom || '?'} — ${f.theme}`;
   return f.nom || f.titre || f.libelle || '—';
 }
 

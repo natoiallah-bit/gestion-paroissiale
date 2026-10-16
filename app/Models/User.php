@@ -17,6 +17,7 @@ class User extends Authenticatable
         'admin' => 'Administrateur (vicariat)',
         'secretaire' => 'Secrétaire paroissial',
         'tresorier' => 'Trésorier (conseil économique)',
+        'catechese' => 'Responsable de la catéchèse',
     ];
 
     protected $fillable = ['name', 'email', 'password', 'role', 'actif', 'secteur_id'];

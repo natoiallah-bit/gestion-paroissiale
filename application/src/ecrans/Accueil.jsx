@@ -4,7 +4,7 @@ import { useRequete } from '../crochets.js';
 import { db } from '../db.js';
 import { fcfa, nombre } from '../format.js';
 import { estLimite, peutLire } from '../ressources.js';
-import { comptes as calculerComptes, tableauDeBord } from '../statistiques.js';
+import { catechese as calculerCatechese, comptes as calculerComptes, tableauDeBord } from '../statistiques.js';
 
 const jourCourt = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 
@@ -15,6 +15,7 @@ export function Accueil() {
   const secteurs = useRequete(() => db.secteurs.orderBy('nom').toArray(), [], []);
   const d = useRequete(() => tableauDeBord(session, secteur || null), [secteur], null);
   const comptes = useRequete(() => (peutLire(session.utilisateur.role, 'operations') ? calculerComptes(session, secteur || null) : Promise.resolve(null)), [secteur], null);
+  const cate = useRequete(() => (peutLire(session.utilisateur.role, 'groupes') ? calculerCatechese(session, secteur || null) : Promise.resolve(null)), [secteur], null);
   if (!d) return null;
   const r = d.resume;
   const lecture = (cle) => peutLire(session.utilisateur.role, cle);
@@ -50,6 +51,18 @@ export function Accueil() {
             <div class="stat"><div class="lib">Dépenses du mois</div><div class="val negatif">{fcfa(d.finances.mois.depenses)}</div></div>
             <div class="stat"><div class="lib">Solde du mois</div><div class={'val ' + (d.finances.mois.solde >= 0 ? 'positif' : 'negatif')}>{fcfa(d.finances.mois.solde)}</div></div>
             <div class="stat"><div class="lib">Solde de l'année</div><div class={'val ' + (d.finances.annee.solde >= 0 ? 'positif' : 'negatif')}>{fcfa(d.finances.annee.solde)}</div><div class="det">recettes {fcfa(d.finances.annee.recettes)}</div></div>
+          </div>
+        </>
+      )}
+
+      {cate && (
+        <>
+          <h2>Catéchèse</h2>
+          <div class="grille">
+            <div class="stat"><div class="lib">Groupes ({cate.annee})</div><div class="val">{cate.groupes}</div></div>
+            <div class="stat"><div class="lib">Catéchistes actifs</div><div class="val">{cate.catechistes}</div></div>
+            <div class="stat"><div class="lib">Catéchumènes inscrits</div><div class="val">{nombre(cate.inscrits)}</div><div class="det">{cate.admis} admis</div></div>
+            <div class="stat"><div class="lib">Séances</div><div class="val">{cate.seances}</div><div class="det">{cate.presence !== null ? `présence moyenne ${cate.presence} %` : 'aucune présence saisie'}</div></div>
           </div>
         </>
       )}

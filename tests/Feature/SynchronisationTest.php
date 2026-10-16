@@ -5,9 +5,12 @@ namespace Tests\Feature;
 use App\Models\Ceb;
 use App\Models\Depot;
 use App\Models\Fidele;
+use App\Models\Inscription;
 use App\Models\Sacrement;
 use App\Models\Secteur;
 use App\Models\User;
+use App\Support\Enregistreur;
+use App\Support\Ressources;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -178,5 +181,36 @@ class SynchronisationTest extends TestCase
         // Le dépôt envoyé est enregistré dans son propre secteur, et le dépôt du secteur B reste invisible
         $this->assertSame([], array_filter($r['donnees']['depots'], fn ($d) => $d['uuid'] === $dB));
         $this->assertSame(0, Depot::where('secteur_id', $b->id)->where('montant', 1000)->count());
+    }
+
+    public function test_la_catechese_se_synchronise_avec_le_secteur_derive(): void
+    {
+        $secteur = Secteur::create(['nom' => 'A']);
+        $fidele = Fidele::create(['secteur_id' => $secteur->id, 'nom' => 'X', 'prenoms' => 'Y', 'sexe' => 'F', 'statut' => 'actif']);
+        $resp = User::factory()->create(['role' => 'catechese', 'secteur_id' => $secteur->id]);
+        [$cat, $grp, $ins, $sea] = [(string) Str::uuid(), (string) Str::uuid(), (string) Str::uuid(), (string) Str::uuid()];
+        $annee = Ressources::anneePastorale();
+
+        $r = $this->synchro($this->connecter($resp)['jeton'], 0, [
+            'catechistes' => [['uuid' => $cat, 'secteur_uuid' => $secteur->uuid, 'nom' => 'Yao', 'prenoms' => 'Marie', 'formation' => 'aucune', 'statut' => 'actif']],
+            'groupes' => [['uuid' => $grp, 'secteur_uuid' => $secteur->uuid, 'annee' => $annee, 'nom' => 'G1', 'niveau' => 'bapteme', 'catechiste_uuid' => $cat]],
+            'inscriptions' => [['uuid' => $ins, 'fidele_uuid' => $fidele->uuid, 'groupe_uuid' => $grp, 'date_inscription' => today()->toDateString(), 'statut' => 'inscrit']],
+            'seances' => [['uuid' => $sea, 'groupe_uuid' => $grp, 'date_seance' => today()->toDateString(), 'theme' => 'T', 'presents' => 5, 'absents' => 1]],
+        ])->json();
+
+        $this->assertSame([], $r['rejets']);
+        $this->assertSame($secteur->uuid, $r['donnees']['inscriptions'][0]['secteur_uuid']);
+        $this->assertSame($secteur->uuid, $r['donnees']['seances'][0]['secteur_uuid']);
+        $this->assertSame($grp, $r['donnees']['inscriptions'][0]['groupe_uuid']);
+
+        // Le bapteme enregistré ensuite admet l'inscrit ; le trésorier ne reçoit rien de la catéchèse
+        Enregistreur::enregistrer('sacrements', ['uuid' => (string) Str::uuid(), 'fidele_uuid' => $fidele->uuid, 'type' => 'bapteme', 'date_sacrement' => today()->toDateString()], User::factory()->create(['role' => 'secretaire', 'secteur_id' => $secteur->id]));
+        $this->assertSame('admis', Inscription::first()->statut);
+
+        $tresorier = User::factory()->create(['role' => 'tresorier', 'secteur_id' => $secteur->id]);
+        $r = $this->synchro($this->connecter($tresorier)['jeton'])->json();
+        $this->assertArrayNotHasKey('groupes', $r['donnees']);
+        $r = $this->synchro($this->connecter($tresorier)['jeton'], 0, ['groupes' => [['uuid' => (string) Str::uuid(), 'secteur_uuid' => $secteur->uuid, 'annee' => $annee, 'nom' => 'Non', 'niveau' => 'eveil']]])->json();
+        $this->assertCount(1, $r['rejets']);
     }
 }

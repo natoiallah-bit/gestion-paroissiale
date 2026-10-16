@@ -1,6 +1,6 @@
 import { db } from './db.js';
 import { jourLocal } from './format.js';
-import { estLimite, peutLire, SACREMENTS } from './ressources.js';
+import { anneePastorale, estLimite, peutLire, RESSOURCES, SACREMENTS } from './ressources.js';
 
 // Mêmes chiffres que le tableau de bord du site, calculés à partir des données de l'appareil.
 // Le serveur n'envoie à chaque compte que ce qu'il a le droit de voir : rien à filtrer ici,
@@ -76,6 +76,43 @@ export async function tableauDeBord(session, secteur = null) {
   }
 
   return { resume, parType, prochaines, enCours, finances, parSecteur, annee, sacrementsLibelles: SACREMENTS };
+}
+
+/** Catéchèse d'une année pastorale (même calcul que le serveur) */
+export async function catechese(session, secteur = null, annee = anneePastorale()) {
+  const [groupes, inscriptions, seances, catechistes, secteurs] = await Promise.all([
+    db.groupes.toArray(), db.inscriptions.toArray(), db.seances.toArray(), db.catechistes.toArray(), db.secteurs.toArray(),
+  ]);
+  const filtre = (f) => !secteur || f.secteur_uuid === secteur;
+  const gAnnee = groupes.filter(filtre).filter((g) => g.annee === annee);
+  const niveau = new Map(gAnnee.map((g) => [g.uuid, g.niveau]));
+  const inscrits = inscriptions.filter((i) => niveau.has(i.groupe_uuid));
+  const statuts = Object.keys(RESSOURCES.inscriptions.champs.find((c) => c.nom === 'statut').options);
+
+  const parNiveau = Object.fromEntries(Object.keys(RESSOURCES.groupes.champs.find((c) => c.nom === 'niveau').options).map((n) => {
+    const ici = inscrits.filter((i) => niveau.get(i.groupe_uuid) === n);
+    return [n, { groupes: gAnnee.filter((g) => g.niveau === n).length, total: ici.length, ...Object.fromEntries(statuts.map((s) => [s, ici.filter((i) => i.statut === s).length])) }];
+  }));
+
+  const dessSeances = seances.filter((s) => niveau.has(s.groupe_uuid));
+  const presents = dessSeances.reduce((t, s) => t + s.presents, 0);
+  const absents = dessSeances.reduce((t, s) => t + s.absents, 0);
+
+  const parSecteur = !estLimite(session.utilisateur) && !secteur
+    ? secteurs.sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).map((s) => ({
+      secteur: s,
+      groupes: gAnnee.filter((g) => g.secteur_uuid === s.uuid).length,
+      catechistes: catechistes.filter((c) => c.secteur_uuid === s.uuid && c.statut === 'actif').length,
+      inscrits: inscrits.filter((i) => i.secteur_uuid === s.uuid).length,
+      admis: inscrits.filter((i) => i.secteur_uuid === s.uuid && i.statut === 'admis').length,
+    })) : null;
+
+  return {
+    annee, groupes: gAnnee.length, catechistes: catechistes.filter(filtre).filter((c) => c.statut === 'actif').length,
+    inscrits: inscrits.length, admis: inscrits.filter((i) => i.statut === 'admis').length,
+    seances: dessSeances.length, presence: presents + absents > 0 ? Math.round((presents / (presents + absents)) * 100) : null,
+    parNiveau, parSecteur,
+  };
 }
 
 /**

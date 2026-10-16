@@ -26,7 +26,8 @@ abstract class Fiche extends Model
 
     protected function colonnesSupplementaires(): array
     {
-        return [];
+        // Les fiches « dérivées » (sacrement, inscription, séance) gardent le secteur de leur fiche mère
+        return Ressources::get(static::cleRessource())['portee'] === 'derivee' ? ['secteur_id'] : [];
     }
 
     protected function casts(): array

@@ -60,16 +60,27 @@ class RessourceController extends Controller
                 foreach ($def['recherche'] as $colonne) {
                     $w->orWhere($colonne, 'like', $q);
                 }
+                // Recherche aussi dans la fiche liée (le nom du fidèle, du groupe…)
+                foreach ($def['recherche_via'] ?? [] as $relation => $colonnes) {
+                    $w->orWhereHas($relation, fn ($r) => $r->where(function ($x) use ($colonnes, $q) {
+                        foreach ($colonnes as $colonne) {
+                            $x->orWhere($colonne, 'like', $q);
+                        }
+                    }));
+                }
             });
         }
 
         // Filtres : choix (statut, type, sens…), références (secteur, CEB…) et période
         $filtres = [];
         foreach ($def['champs'] as $champ) {
+            if ($champ['type'] === 'annee' && $request->filled($champ['nom'])) {
+                $requete->where($champ['nom'], $request->string($champ['nom']));
+            }
             if ($champ['type'] === 'choix' && ($champ['liste'] ?? false) && $request->filled($champ['nom'])) {
                 $requete->where($champ['nom'], $request->string($champ['nom']));
             }
-            if ($champ['type'] === 'ref' && in_array($champ['nom'], ['secteur_uuid', 'ceb_uuid', 'fidele_uuid'], true) && $request->filled($champ['nom'])) {
+            if ($champ['type'] === 'ref' && in_array($champ['nom'], ['secteur_uuid', 'ceb_uuid', 'fidele_uuid', 'groupe_uuid'], true) && $request->filled($champ['nom'])) {
                 $cible = Ressources::get($champ['ref'])['modele']::parUuid($request->string($champ['nom']));
                 $requete->where(Ressources::colonne($champ), $cible?->id ?? 0);
             }
@@ -111,7 +122,8 @@ class RessourceController extends Controller
             'fiches' => $fiches,
             'total' => $total, 'resume' => $resume, 'dateChamp' => $dateChamp,
             'peutEcrire' => Ressources::peutEcrire($user, $cle),
-            'options' => $this->optionsRefs($request, $def, ['secteur_uuid', 'ceb_uuid']),
+            'options' => $this->optionsRefs($request, $def, ['secteur_uuid', 'ceb_uuid', 'groupe_uuid']),
+            'annees' => $this->annees($def, $request),
         ]);
     }
 
@@ -122,6 +134,10 @@ class RessourceController extends Controller
         foreach ($def['champs'] as $champ) {
             if (isset($champ['defaut'])) {
                 $fiche->{$champ['nom']} = $champ['defaut'];
+            } elseif ($champ['type'] === 'annee') {
+                $fiche->{$champ['nom']} = Ressources::anneePastorale();
+            } elseif ($champ['type'] === 'date' && ($champ['requis'] ?? false)) {
+                $fiche->{$champ['nom']} = today()->toDateString(); // la date du jour, modifiable
             }
         }
         // Raccourcis : « Ajouter un sacrement » depuis la fiche d'un fidèle, etc.
@@ -229,6 +245,19 @@ class RessourceController extends Controller
         $sacrement = $this->fiche($request, 'sacrements', $id)->load('fidele.secteur', 'fidele.ceb', 'secteur');
 
         return view('ressources.extrait', ['sacrement' => $sacrement, 'vicariat' => Vicariat::courant()]);
+    }
+
+    /** Années pastorales présentes dans les données, pour le filtre des listes (la plus récente d'abord) */
+    private function annees(array $def, Request $request): array
+    {
+        $champ = collect($def['champs'])->firstWhere('type', 'annee');
+        if (! $champ) {
+            return [];
+        }
+        $cle = $request->route()->defaults['ressource'];
+        $annees = Portee::restreindre($def['modele']::query(), $request->user(), $cle)->distinct()->orderByDesc($champ['nom'])->pluck($champ['nom'])->all();
+
+        return array_values(array_unique(array_merge([Ressources::anneePastorale()], $annees)));
     }
 
     /** Listes déroulantes des champs de type ref (limitées à ce que le compte peut voir) */

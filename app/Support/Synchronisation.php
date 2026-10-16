@@ -102,7 +102,7 @@ class Synchronisation
                 $relations[] = Ressources::relation($champ).':id,uuid';
             }
         }
-        if ($cle === 'sacrements') {
+        if (Ressources::get($cle)['portee'] === 'derivee') {
             $relations[] = 'secteur:id,uuid';
         }
 

@@ -20,7 +20,7 @@
         <option value="">— Tout le vicariat (administrateur, ou trésorier du conseil économique du vicariat)</option>
         @foreach($secteurs as $p)<option value="{{ $p->id }}" @selected((int) old('secteur_id', $user->secteur_id) === $p->id)>{{ $p->nom }}</option>@endforeach
     </select>
-    <div class="aide">Le secrétaire et le trésorier d'un secteur ne voient que leur secteur. Un trésorier sans secteur gère la caisse centrale du vicariat.</div>
+    <div class="aide">Le secrétaire et le trésorier d'un secteur ne voient que leur secteur. Un trésorier sans secteur gère la caisse centrale du vicariat ; un responsable de la catéchèse sans secteur coordonne la catéchèse de tout le vicariat.</div>
     <div class="ligne-champs">
         <div><label for="password">Mot de passe @if($user->exists)<span class="aide">(vide = inchangé)</span>@endif</label><input type="password" id="password" name="password" autocomplete="new-password" @required(! $user->exists)></div>
         <div><label for="password_confirmation">Confirmation</label><input type="password" id="password_confirmation" name="password_confirmation" autocomplete="new-password"></div>

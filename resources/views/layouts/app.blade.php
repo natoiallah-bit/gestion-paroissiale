@@ -139,6 +139,14 @@
             {!! $entree('sacrements') !!}
         @endif
 
+        @if(\App\Support\Ressources::peutLire($u, 'groupes'))
+            <div class="menu-label">Catéchèse</div>
+            {!! $entree('groupes') !!}
+            {!! $entree('inscriptions') !!}
+            {!! $entree('seances') !!}
+            {!! $entree('catechistes') !!}
+        @endif
+
         <div class="menu-label">Vie vicariale</div>
         {!! $entree('annonces') !!}
         {!! $entree('activites', 'Programme') !!}

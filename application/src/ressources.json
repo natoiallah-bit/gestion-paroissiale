@@ -9,7 +9,8 @@
             "lecture": [
                 "admin",
                 "secretaire",
-                "tresorier"
+                "tresorier",
+                "catechese"
             ],
             "ecriture": [
                 "admin"
@@ -61,6 +62,11 @@
                     "titre": "Mouvements et pastorales du secteur"
                 },
                 {
+                    "ressource": "groupes",
+                    "cle": "secteur_uuid",
+                    "titre": "Groupes de catéchèse"
+                },
+                {
                     "ressource": "depots",
                     "cle": "secteur_uuid",
                     "titre": "Dépôts au vicariat"
@@ -76,7 +82,8 @@
             "lecture": [
                 "admin",
                 "secretaire",
-                "tresorier"
+                "tresorier",
+                "catechese"
             ],
             "ecriture": [
                 "admin",
@@ -151,7 +158,8 @@
             "lecture": [
                 "admin",
                 "secretaire",
-                "tresorier"
+                "tresorier",
+                "catechese"
             ],
             "ecriture": [
                 "admin",
@@ -228,7 +236,8 @@
             "portee": "obligatoire",
             "lecture": [
                 "admin",
-                "secretaire"
+                "secretaire",
+                "catechese"
             ],
             "ecriture": [
                 "admin",
@@ -334,6 +343,11 @@
                     "ressource": "sacrements",
                     "cle": "fidele_uuid",
                     "titre": "Sacrements reçus"
+                },
+                {
+                    "ressource": "inscriptions",
+                    "cle": "fidele_uuid",
+                    "titre": "Catéchèse"
                 }
             ]
         },
@@ -343,9 +357,11 @@
             "article": "un",
             "sous_titre": "Registres de baptême, communion, confirmation, mariage, obsèques",
             "portee": "derivee",
+            "derive_de": "fidele_uuid",
             "lecture": [
                 "admin",
-                "secretaire"
+                "secretaire",
+                "catechese"
             ],
             "ecriture": [
                 "admin",
@@ -357,6 +373,12 @@
                 "lieu",
                 "ministre"
             ],
+            "recherche_via": {
+                "fidele": [
+                    "nom",
+                    "prenoms"
+                ]
+            },
             "champs": [
                 {
                     "nom": "fidele_uuid",
@@ -419,6 +441,382 @@
                     "max": 60,
                     "liste": true,
                     "aide": "Numéro ou folio dans le registre papier."
+                },
+                {
+                    "nom": "note",
+                    "label": "Note",
+                    "type": "long",
+                    "max": 1000
+                }
+            ]
+        },
+        "catechistes": {
+            "libelle": "Catéchistes",
+            "singulier": "catéchiste",
+            "article": "un",
+            "portee": "obligatoire",
+            "lecture": [
+                "admin",
+                "secretaire",
+                "catechese"
+            ],
+            "ecriture": [
+                "admin",
+                "secretaire",
+                "catechese"
+            ],
+            "tri": "nom",
+            "recherche": [
+                "nom",
+                "prenoms",
+                "telephone"
+            ],
+            "champs": [
+                {
+                    "nom": "secteur_uuid",
+                    "label": "Secteur",
+                    "type": "ref",
+                    "ref": "secteurs",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "nom",
+                    "label": "Nom",
+                    "type": "texte",
+                    "requis": true,
+                    "max": 100,
+                    "liste": true
+                },
+                {
+                    "nom": "prenoms",
+                    "label": "Prénoms",
+                    "type": "texte",
+                    "requis": true,
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "telephone",
+                    "label": "Téléphone",
+                    "type": "tel",
+                    "max": 30,
+                    "liste": true
+                },
+                {
+                    "nom": "fidele_uuid",
+                    "label": "Fiche de fidèle",
+                    "type": "ref",
+                    "ref": "fideles",
+                    "meme_secteur": true,
+                    "aide": "Facultatif : relie le catéchiste à sa fiche de paroissien."
+                },
+                {
+                    "nom": "formation",
+                    "label": "Formation reçue",
+                    "type": "choix",
+                    "defaut": "aucune",
+                    "requis": true,
+                    "options": {
+                        "aucune": "Aucune",
+                        "initiale": "Formation initiale",
+                        "continue": "Formation continue",
+                        "diplome": "Diplômé en catéchèse"
+                    }
+                },
+                {
+                    "nom": "date_debut",
+                    "label": "Catéchiste depuis le",
+                    "type": "date"
+                },
+                {
+                    "nom": "statut",
+                    "label": "Situation",
+                    "type": "choix",
+                    "requis": true,
+                    "liste": true,
+                    "defaut": "actif",
+                    "options": {
+                        "actif": "Actif",
+                        "inactif": "Inactif"
+                    }
+                },
+                {
+                    "nom": "note",
+                    "label": "Note",
+                    "type": "long",
+                    "max": 1000
+                }
+            ],
+            "liees": [
+                {
+                    "ressource": "groupes",
+                    "cle": "catechiste_uuid",
+                    "titre": "Groupes confiés"
+                }
+            ]
+        },
+        "groupes": {
+            "libelle": "Groupes de catéchèse",
+            "singulier": "groupe de catéchèse",
+            "article": "un",
+            "sous_titre": "Un groupe = un niveau, une année pastorale, un catéchiste responsable",
+            "portee": "obligatoire",
+            "lecture": [
+                "admin",
+                "secretaire",
+                "catechese"
+            ],
+            "ecriture": [
+                "admin",
+                "secretaire",
+                "catechese"
+            ],
+            "tri": "-annee",
+            "recherche": [
+                "nom",
+                "lieu"
+            ],
+            "champs": [
+                {
+                    "nom": "secteur_uuid",
+                    "label": "Secteur",
+                    "type": "ref",
+                    "ref": "secteurs",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "annee",
+                    "label": "Année pastorale",
+                    "type": "annee",
+                    "requis": true,
+                    "liste": true,
+                    "aide": "Au format 2026-2027."
+                },
+                {
+                    "nom": "nom",
+                    "label": "Nom du groupe",
+                    "type": "texte",
+                    "requis": true,
+                    "max": 150,
+                    "liste": true
+                },
+                {
+                    "nom": "niveau",
+                    "label": "Niveau",
+                    "type": "choix",
+                    "requis": true,
+                    "liste": true,
+                    "options": {
+                        "eveil": "Éveil à la foi",
+                        "bapteme": "Préparation au baptême",
+                        "communion": "Préparation à la première communion",
+                        "confirmation": "Préparation à la confirmation",
+                        "catechumenat": "Catéchuménat des adultes",
+                        "mariage": "Préparation au mariage",
+                        "perseverance": "Persévérance"
+                    }
+                },
+                {
+                    "nom": "catechiste_uuid",
+                    "label": "Catéchiste responsable",
+                    "type": "ref",
+                    "ref": "catechistes",
+                    "liste": true,
+                    "meme_secteur": true
+                },
+                {
+                    "nom": "jour_rencontre",
+                    "label": "Jour de rencontre",
+                    "type": "choix",
+                    "options": {
+                        "lundi": "Lundi",
+                        "mardi": "Mardi",
+                        "mercredi": "Mercredi",
+                        "jeudi": "Jeudi",
+                        "vendredi": "Vendredi",
+                        "samedi": "Samedi",
+                        "dimanche": "Dimanche"
+                    }
+                },
+                {
+                    "nom": "heure",
+                    "label": "Heure",
+                    "type": "heure"
+                },
+                {
+                    "nom": "lieu",
+                    "label": "Lieu",
+                    "type": "texte",
+                    "max": 150
+                },
+                {
+                    "nom": "note",
+                    "label": "Note",
+                    "type": "long",
+                    "max": 1000
+                }
+            ],
+            "liees": [
+                {
+                    "ressource": "inscriptions",
+                    "cle": "groupe_uuid",
+                    "titre": "Inscrits"
+                },
+                {
+                    "ressource": "seances",
+                    "cle": "groupe_uuid",
+                    "titre": "Séances"
+                }
+            ]
+        },
+        "inscriptions": {
+            "libelle": "Inscriptions",
+            "singulier": "inscription",
+            "article": "une",
+            "sous_titre": "Catéchumènes inscrits dans un groupe",
+            "portee": "derivee",
+            "derive_de": "fidele_uuid",
+            "lecture": [
+                "admin",
+                "secretaire",
+                "catechese"
+            ],
+            "ecriture": [
+                "admin",
+                "secretaire",
+                "catechese"
+            ],
+            "tri": "-date_inscription",
+            "recherche": [],
+            "recherche_via": {
+                "fidele": [
+                    "nom",
+                    "prenoms"
+                ],
+                "groupe": [
+                    "nom"
+                ]
+            },
+            "champs": [
+                {
+                    "nom": "fidele_uuid",
+                    "label": "Catéchumène (fidèle)",
+                    "type": "ref",
+                    "ref": "fideles",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "groupe_uuid",
+                    "label": "Groupe",
+                    "type": "ref",
+                    "ref": "groupes",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "date_inscription",
+                    "label": "Date d'inscription",
+                    "type": "date",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "statut",
+                    "label": "Résultat",
+                    "type": "choix",
+                    "requis": true,
+                    "liste": true,
+                    "defaut": "inscrit",
+                    "options": {
+                        "inscrit": "Inscrit",
+                        "admis": "Admis (sacrement reçu)",
+                        "ajourne": "Ajourné",
+                        "abandon": "Abandon"
+                    }
+                },
+                {
+                    "nom": "observation",
+                    "label": "Observation",
+                    "type": "long",
+                    "max": 1000
+                }
+            ]
+        },
+        "seances": {
+            "libelle": "Séances de catéchèse",
+            "singulier": "séance",
+            "article": "une",
+            "sous_titre": "Thème et présence à chaque rencontre",
+            "portee": "derivee",
+            "derive_de": "groupe_uuid",
+            "lecture": [
+                "admin",
+                "secretaire",
+                "catechese"
+            ],
+            "ecriture": [
+                "admin",
+                "secretaire",
+                "catechese"
+            ],
+            "tri": "-date_seance",
+            "recherche": [
+                "theme"
+            ],
+            "recherche_via": {
+                "groupe": [
+                    "nom"
+                ]
+            },
+            "champs": [
+                {
+                    "nom": "groupe_uuid",
+                    "label": "Groupe",
+                    "type": "ref",
+                    "ref": "groupes",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "date_seance",
+                    "label": "Date",
+                    "type": "date",
+                    "requis": true,
+                    "liste": true
+                },
+                {
+                    "nom": "theme",
+                    "label": "Thème",
+                    "type": "texte",
+                    "requis": true,
+                    "max": 200,
+                    "liste": true
+                },
+                {
+                    "nom": "catechiste_uuid",
+                    "label": "Animée par",
+                    "type": "ref",
+                    "ref": "catechistes",
+                    "meme_secteur": true
+                },
+                {
+                    "nom": "presents",
+                    "label": "Présents",
+                    "type": "entier",
+                    "requis": true,
+                    "liste": true,
+                    "defaut": 0
+                },
+                {
+                    "nom": "absents",
+                    "label": "Absents",
+                    "type": "entier",
+                    "requis": true,
+                    "liste": true,
+                    "defaut": 0
                 },
                 {
                     "nom": "note",
@@ -614,7 +1012,8 @@
             "lecture": [
                 "admin",
                 "secretaire",
-                "tresorier"
+                "tresorier",
+                "catechese"
             ],
             "ecriture": [
                 "admin",
@@ -674,7 +1073,8 @@
             "lecture": [
                 "admin",
                 "secretaire",
-                "tresorier"
+                "tresorier",
+                "catechese"
             ],
             "ecriture": [
                 "admin",
@@ -762,5 +1162,12 @@
         "Aide aux familles",
         "Contribution au doyenné / archidiocèse",
         "Autre dépense"
-    ]
+    ],
+    "sacrement_prepare": {
+        "bapteme": "bapteme",
+        "catechumenat": "bapteme",
+        "communion": "eucharistie",
+        "confirmation": "confirmation",
+        "mariage": "mariage"
+    }
 }

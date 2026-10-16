@@ -3,7 +3,7 @@ import { useApp } from '../App.jsx';
 import { useCartes, useRequete } from '../crochets.js';
 import { db } from '../db.js';
 import { fcfa } from '../format.js';
-import { cumulsDepots, estLimite, intitule, peutEcrire, RESSOURCES, trier, valeur } from '../ressources.js';
+import { anneePastorale, cumulsDepots, estLimite, intitule, peutEcrire, RESSOURCES, trier, valeur } from '../ressources.js';
 
 const PAGE = 60;
 
@@ -24,7 +24,7 @@ export function Liste({ cle, filtres: filtresInitiaux = {} }) {
   const calculees = (def.calculees || []).filter((c) => !c.central || !estLimite(session.utilisateur));
   const cumuls = cle === 'depots' ? cumulsDepots(toutes) : null;
   const champDate = def.champs.find((c) => c.type === 'date' && c.liste);
-  const filtrables = colonnes.filter((c) => c.type === 'choix' || (c.type === 'ref' && ['secteur_uuid', 'ceb_uuid', 'fidele_uuid'].includes(c.nom)));
+  const filtrables = colonnes.filter((c) => c.type === 'choix' || c.type === 'annee' || (c.type === 'ref' && ['secteur_uuid', 'ceb_uuid', 'fidele_uuid', 'groupe_uuid'].includes(c.nom)));
   const mot = q.trim().toLowerCase();
 
   const lignes = trier(cle, toutes.filter((f) => {
@@ -52,7 +52,7 @@ export function Liste({ cle, filtres: filtresInitiaux = {} }) {
       <div class="champs pas-imprimer" style="margin-bottom:12px; align-items:flex-end">
         <div style="flex:2; min-width:180px"><label>Recherche</label><input type="search" value={q} onInput={(e) => { setQ(e.target.value); setMax(PAGE); }} /></div>
         {filtrables.map((c) => {
-          const options = c.type === 'choix' ? Object.entries(c.options) : [...cartes[c.ref].values()].filter((f) => c.ref !== 'cebs' || true).map((f) => [f.uuid, intitule(c.ref, f, cartes)]).sort((a, b) => a[1].localeCompare(b[1], 'fr'));
+          const options = c.type === 'annee' ? [...new Set([anneePastorale(), ...toutes.map((f) => f[c.nom])])].sort().reverse().map((a) => [a, a]) : c.type === 'choix' ? Object.entries(c.options) : [...cartes[c.ref].values()].filter((f) => c.ref !== 'cebs' || true).map((f) => [f.uuid, intitule(c.ref, f, cartes)]).sort((a, b) => a[1].localeCompare(b[1], 'fr'));
           if (c.type === 'ref' && options.length < 2) return null;
           return (
             <div key={c.nom}><label>{c.label}</label>

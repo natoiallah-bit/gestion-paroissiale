@@ -4,12 +4,16 @@ namespace App\Support;
 
 use App\Models\Activite;
 use App\Models\Annonce;
+use App\Models\Catechiste;
 use App\Models\Ceb;
 use App\Models\Depot;
 use App\Models\Fidele;
+use App\Models\GroupeCatechese;
+use App\Models\Inscription;
 use App\Models\Mouvement;
 use App\Models\Operation;
 use App\Models\Sacrement;
+use App\Models\Seance;
 use App\Models\Secteur;
 use App\Models\User;
 use Illuminate\Validation\Rule;
@@ -43,9 +47,38 @@ class Ressources
         'obseques' => 'Obsèques',
     ];
 
+    public const ROLES_ECRITURE_CATECHESE = ['admin', 'secretaire', 'catechese'];
+
+    // Niveau d'un groupe de catéchèse ; ceux qui préparent un sacrement le disent (voir SACREMENT_PREPARE)
+    public const NIVEAUX_CATECHESE = [
+        'eveil' => 'Éveil à la foi',
+        'bapteme' => 'Préparation au baptême',
+        'communion' => 'Préparation à la première communion',
+        'confirmation' => 'Préparation à la confirmation',
+        'catechumenat' => 'Catéchuménat des adultes',
+        'mariage' => 'Préparation au mariage',
+        'perseverance' => 'Persévérance',
+    ];
+
+    // Sacrement reçu à la fin d'un niveau : l'inscription passe à « admis » quand il est enregistré
+    public const SACREMENT_PREPARE = ['bapteme' => 'bapteme', 'catechumenat' => 'bapteme', 'communion' => 'eucharistie', 'confirmation' => 'confirmation', 'mariage' => 'mariage'];
+
+    public const STATUTS_INSCRIPTION = ['inscrit' => 'Inscrit', 'admis' => 'Admis (sacrement reçu)', 'ajourne' => 'Ajourné', 'abandon' => 'Abandon'];
+
+    public const JOURS = ['lundi' => 'Lundi', 'mardi' => 'Mardi', 'mercredi' => 'Mercredi', 'jeudi' => 'Jeudi', 'vendredi' => 'Vendredi', 'samedi' => 'Samedi', 'dimanche' => 'Dimanche'];
+
     public const CATEGORIES_RECETTES = ['Cotisation de CEB', 'Quête', 'Denier du culte', 'Intention de messe', 'Don', 'Offrande de sacrement', 'Autre recette'];
 
     public const CATEGORIES_DEPENSES = ['Entretien / travaux', 'Électricité / eau', 'Salaires et indemnités', 'Liturgie et culte', 'Transport', 'Aide aux familles', 'Contribution au doyenné / archidiocèse', 'Autre dépense'];
+
+    /** Année pastorale d'une date : de septembre à août (2026-2027 pour octobre 2026) */
+    public static function anneePastorale(?\DateTimeInterface $date = null): string
+    {
+        $date ??= now();
+        $debut = (int) $date->format('n') >= 9 ? (int) $date->format('Y') : (int) $date->format('Y') - 1;
+
+        return $debut.'-'.($debut + 1);
+    }
 
     public static function toutes(): array
     {
@@ -57,7 +90,7 @@ class Ressources
                 'libelle' => 'Secteurs', 'singulier' => 'secteur', 'article' => 'un',
                 'sous_titre' => 'Chaque secteur regroupe des CEB, des mouvements et des pastorales',
                 'portee' => 'aucune',
-                'lecture' => ['admin', 'secretaire', 'tresorier'], 'ecriture' => ['admin'],
+                'lecture' => ['admin', 'secretaire', 'tresorier', 'catechese'], 'ecriture' => ['admin'],
                 'tri' => 'nom',
                 'recherche' => ['nom', 'responsable'],
                 'champs' => [
@@ -69,6 +102,7 @@ class Ressources
                 'liees' => [
                     ['ressource' => 'cebs', 'cle' => 'secteur_uuid', 'titre' => 'CEB du secteur'],
                     ['ressource' => 'mouvements', 'cle' => 'secteur_uuid', 'titre' => 'Mouvements et pastorales du secteur'],
+                    ['ressource' => 'groupes', 'cle' => 'secteur_uuid', 'titre' => 'Groupes de catéchèse'],
                     ['ressource' => 'depots', 'cle' => 'secteur_uuid', 'titre' => 'Dépôts au vicariat'],
                 ],
             ],
@@ -77,7 +111,7 @@ class Ressources
                 'libelle' => 'CEB', 'singulier' => 'CEB', 'article' => 'une',
                 'sous_titre' => 'Communautés ecclésiales de base',
                 'portee' => 'obligatoire',
-                'lecture' => ['admin', 'secretaire', 'tresorier'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
+                'lecture' => ['admin', 'secretaire', 'tresorier', 'catechese'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
                 'tri' => 'nom',
                 'recherche' => ['nom', 'quartier', 'responsable'],
                 'champs' => [
@@ -98,7 +132,7 @@ class Ressources
                 'libelle' => 'Mouvements et pastorales', 'singulier' => 'mouvement ou pastorale', 'article' => 'un',
                 'sous_titre' => 'Mouvements des jeunes, des adultes, pastorales et services',
                 'portee' => 'facultative',
-                'lecture' => ['admin', 'secretaire', 'tresorier'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
+                'lecture' => ['admin', 'secretaire', 'tresorier', 'catechese'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
                 'tri' => 'nom',
                 'recherche' => ['nom', 'responsable'],
                 'champs' => [
@@ -116,7 +150,7 @@ class Ressources
                 'modele' => Fidele::class,
                 'libelle' => 'Fidèles', 'singulier' => 'fidèle', 'article' => 'un',
                 'portee' => 'obligatoire',
-                'lecture' => ['admin', 'secretaire'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
+                'lecture' => ['admin', 'secretaire', 'catechese'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
                 'tri' => 'nom',
                 'recherche' => ['nom', 'prenoms', 'telephone', 'famille'],
                 'champs' => [
@@ -135,16 +169,18 @@ class Ressources
                 ],
                 'liees' => [
                     ['ressource' => 'sacrements', 'cle' => 'fidele_uuid', 'titre' => 'Sacrements reçus'],
+                    ['ressource' => 'inscriptions', 'cle' => 'fidele_uuid', 'titre' => 'Catéchèse'],
                 ],
             ],
             'sacrements' => [
                 'modele' => Sacrement::class,
                 'libelle' => 'Sacrements', 'singulier' => 'sacrement', 'article' => 'un',
                 'sous_titre' => 'Registres de baptême, communion, confirmation, mariage, obsèques',
-                'portee' => 'derivee', // le secteur est celle du fidèle
-                'lecture' => ['admin', 'secretaire'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
+                'portee' => 'derivee', 'derive_de' => 'fidele_uuid', // le secteur est celui du fidèle
+                'lecture' => ['admin', 'secretaire', 'catechese'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
                 'tri' => '-date_sacrement',
                 'recherche' => ['numero_registre', 'lieu', 'ministre'],
+                'recherche_via' => ['fidele' => ['nom', 'prenoms']],
                 'champs' => [
                     ['nom' => 'fidele_uuid', 'label' => 'Fidèle', 'type' => 'ref', 'ref' => 'fideles', 'requis' => true, 'liste' => true],
                     ['nom' => 'type', 'label' => 'Sacrement', 'type' => 'choix', 'requis' => true, 'liste' => true, 'options' => self::SACREMENTS],
@@ -154,6 +190,89 @@ class Ressources
                     ['nom' => 'parrain', 'label' => 'Parrain / marraine / témoins', 'type' => 'texte', 'max' => 255],
                     ['nom' => 'conjoint', 'label' => 'Conjoint (mariage)', 'type' => 'texte', 'max' => 200],
                     ['nom' => 'numero_registre', 'label' => 'N° du registre', 'type' => 'texte', 'max' => 60, 'liste' => true, 'aide' => 'Numéro ou folio dans le registre papier.'],
+                    ['nom' => 'note', 'label' => 'Note', 'type' => 'long', 'max' => 1000],
+                ],
+            ],
+            'catechistes' => [
+                'modele' => Catechiste::class,
+                'libelle' => 'Catéchistes', 'singulier' => 'catéchiste', 'article' => 'un',
+                'portee' => 'obligatoire',
+                'lecture' => ['admin', 'secretaire', 'catechese'], 'ecriture' => self::ROLES_ECRITURE_CATECHESE,
+                'tri' => 'nom',
+                'recherche' => ['nom', 'prenoms', 'telephone'],
+                'champs' => [
+                    ['nom' => 'secteur_uuid', 'label' => 'Secteur', 'type' => 'ref', 'ref' => 'secteurs', 'requis' => true, 'liste' => true],
+                    ['nom' => 'nom', 'label' => 'Nom', 'type' => 'texte', 'requis' => true, 'max' => 100, 'liste' => true],
+                    ['nom' => 'prenoms', 'label' => 'Prénoms', 'type' => 'texte', 'requis' => true, 'max' => 150, 'liste' => true],
+                    ['nom' => 'telephone', 'label' => 'Téléphone', 'type' => 'tel', 'max' => 30, 'liste' => true],
+                    ['nom' => 'fidele_uuid', 'label' => 'Fiche de fidèle', 'type' => 'ref', 'ref' => 'fideles', 'meme_secteur' => true, 'aide' => 'Facultatif : relie le catéchiste à sa fiche de paroissien.'],
+                    ['nom' => 'formation', 'label' => 'Formation reçue', 'type' => 'choix', 'defaut' => 'aucune', 'requis' => true,
+                        'options' => ['aucune' => 'Aucune', 'initiale' => 'Formation initiale', 'continue' => 'Formation continue', 'diplome' => 'Diplômé en catéchèse']],
+                    ['nom' => 'date_debut', 'label' => 'Catéchiste depuis le', 'type' => 'date'],
+                    ['nom' => 'statut', 'label' => 'Situation', 'type' => 'choix', 'requis' => true, 'liste' => true, 'defaut' => 'actif', 'options' => ['actif' => 'Actif', 'inactif' => 'Inactif']],
+                    ['nom' => 'note', 'label' => 'Note', 'type' => 'long', 'max' => 1000],
+                ],
+                'liees' => [
+                    ['ressource' => 'groupes', 'cle' => 'catechiste_uuid', 'titre' => 'Groupes confiés'],
+                ],
+            ],
+            'groupes' => [
+                'modele' => GroupeCatechese::class,
+                'libelle' => 'Groupes de catéchèse', 'singulier' => 'groupe de catéchèse', 'article' => 'un',
+                'sous_titre' => 'Un groupe = un niveau, une année pastorale, un catéchiste responsable',
+                'portee' => 'obligatoire',
+                'lecture' => ['admin', 'secretaire', 'catechese'], 'ecriture' => self::ROLES_ECRITURE_CATECHESE,
+                'tri' => '-annee',
+                'recherche' => ['nom', 'lieu'],
+                'champs' => [
+                    ['nom' => 'secteur_uuid', 'label' => 'Secteur', 'type' => 'ref', 'ref' => 'secteurs', 'requis' => true, 'liste' => true],
+                    ['nom' => 'annee', 'label' => 'Année pastorale', 'type' => 'annee', 'requis' => true, 'liste' => true, 'aide' => 'Au format 2026-2027.'],
+                    ['nom' => 'nom', 'label' => 'Nom du groupe', 'type' => 'texte', 'requis' => true, 'max' => 150, 'liste' => true],
+                    ['nom' => 'niveau', 'label' => 'Niveau', 'type' => 'choix', 'requis' => true, 'liste' => true, 'options' => self::NIVEAUX_CATECHESE],
+                    ['nom' => 'catechiste_uuid', 'label' => 'Catéchiste responsable', 'type' => 'ref', 'ref' => 'catechistes', 'liste' => true, 'meme_secteur' => true],
+                    ['nom' => 'jour_rencontre', 'label' => 'Jour de rencontre', 'type' => 'choix', 'options' => self::JOURS],
+                    ['nom' => 'heure', 'label' => 'Heure', 'type' => 'heure'],
+                    ['nom' => 'lieu', 'label' => 'Lieu', 'type' => 'texte', 'max' => 150],
+                    ['nom' => 'note', 'label' => 'Note', 'type' => 'long', 'max' => 1000],
+                ],
+                'liees' => [
+                    ['ressource' => 'inscriptions', 'cle' => 'groupe_uuid', 'titre' => 'Inscrits'],
+                    ['ressource' => 'seances', 'cle' => 'groupe_uuid', 'titre' => 'Séances'],
+                ],
+            ],
+            'inscriptions' => [
+                'modele' => Inscription::class,
+                'libelle' => 'Inscriptions', 'singulier' => 'inscription', 'article' => 'une',
+                'sous_titre' => 'Catéchumènes inscrits dans un groupe',
+                'portee' => 'derivee', 'derive_de' => 'fidele_uuid', // le secteur est celui du fidèle
+                'lecture' => ['admin', 'secretaire', 'catechese'], 'ecriture' => self::ROLES_ECRITURE_CATECHESE,
+                'tri' => '-date_inscription',
+                'recherche' => [],
+                'recherche_via' => ['fidele' => ['nom', 'prenoms'], 'groupe' => ['nom']],
+                'champs' => [
+                    ['nom' => 'fidele_uuid', 'label' => 'Catéchumène (fidèle)', 'type' => 'ref', 'ref' => 'fideles', 'requis' => true, 'liste' => true],
+                    ['nom' => 'groupe_uuid', 'label' => 'Groupe', 'type' => 'ref', 'ref' => 'groupes', 'requis' => true, 'liste' => true],
+                    ['nom' => 'date_inscription', 'label' => 'Date d\'inscription', 'type' => 'date', 'requis' => true, 'liste' => true],
+                    ['nom' => 'statut', 'label' => 'Résultat', 'type' => 'choix', 'requis' => true, 'liste' => true, 'defaut' => 'inscrit', 'options' => self::STATUTS_INSCRIPTION],
+                    ['nom' => 'observation', 'label' => 'Observation', 'type' => 'long', 'max' => 1000],
+                ],
+            ],
+            'seances' => [
+                'modele' => Seance::class,
+                'libelle' => 'Séances de catéchèse', 'singulier' => 'séance', 'article' => 'une',
+                'sous_titre' => 'Thème et présence à chaque rencontre',
+                'portee' => 'derivee', 'derive_de' => 'groupe_uuid', // le secteur est celui du groupe
+                'lecture' => ['admin', 'secretaire', 'catechese'], 'ecriture' => self::ROLES_ECRITURE_CATECHESE,
+                'tri' => '-date_seance',
+                'recherche' => ['theme'],
+                'recherche_via' => ['groupe' => ['nom']],
+                'champs' => [
+                    ['nom' => 'groupe_uuid', 'label' => 'Groupe', 'type' => 'ref', 'ref' => 'groupes', 'requis' => true, 'liste' => true],
+                    ['nom' => 'date_seance', 'label' => 'Date', 'type' => 'date', 'requis' => true, 'liste' => true],
+                    ['nom' => 'theme', 'label' => 'Thème', 'type' => 'texte', 'requis' => true, 'max' => 200, 'liste' => true],
+                    ['nom' => 'catechiste_uuid', 'label' => 'Animée par', 'type' => 'ref', 'ref' => 'catechistes', 'meme_secteur' => true],
+                    ['nom' => 'presents', 'label' => 'Présents', 'type' => 'entier', 'requis' => true, 'liste' => true, 'defaut' => 0],
+                    ['nom' => 'absents', 'label' => 'Absents', 'type' => 'entier', 'requis' => true, 'liste' => true, 'defaut' => 0],
                     ['nom' => 'note', 'label' => 'Note', 'type' => 'long', 'max' => 1000],
                 ],
             ],
@@ -203,7 +322,7 @@ class Ressources
                 'modele' => Annonce::class,
                 'libelle' => 'Annonces', 'singulier' => 'annonce', 'article' => 'une',
                 'portee' => 'facultative',
-                'lecture' => ['admin', 'secretaire', 'tresorier'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
+                'lecture' => ['admin', 'secretaire', 'tresorier', 'catechese'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
                 'tri' => '-date_debut',
                 'recherche' => ['titre', 'contenu'],
                 'champs' => [
@@ -219,7 +338,7 @@ class Ressources
                 'libelle' => 'Programme des activités', 'singulier' => 'activité', 'article' => 'une',
                 'sous_titre' => 'Vie vicariale et paroissiale',
                 'portee' => 'facultative',
-                'lecture' => ['admin', 'secretaire', 'tresorier'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
+                'lecture' => ['admin', 'secretaire', 'tresorier', 'catechese'], 'ecriture' => self::ROLES_ECRITURE_PASTORAL,
                 'tri' => 'date_activite',
                 'recherche' => ['titre', 'lieu'],
                 'champs' => [
@@ -296,8 +415,9 @@ class Ressources
                 'heure' => ['date_format:H:i'],
                 'entier' => ['integer', 'min:0', 'max:10000000'],
                 'montant' => ['integer', 'min:1', 'max:100000000000'],
+                'annee' => ['regex:/^\\d{4}-\\d{4}$/'],
                 'choix' => [Rule::in(array_keys($champ['options']))],
-                'ref' => ['uuid', 'exists:'.$champ['ref'].',uuid'],
+                'ref' => ['uuid', 'exists:'.(new (self::get($champ['ref'])['modele']))->getTable().',uuid'],
             });
             $regles[$champ['nom']] = $r;
         }
@@ -318,7 +438,7 @@ class Ressources
                 $donnees[$champ['nom']] = $fiche->{$champ['nom']};
             }
         }
-        if ($cle === 'sacrements') {
+        if (self::get($cle)['portee'] === 'derivee') {
             $donnees['secteur_uuid'] = $fiche->secteur?->uuid;
         }
 
@@ -339,6 +459,7 @@ class Ressources
             'sacrements' => self::SACREMENTS,
             'categories_recettes' => self::CATEGORIES_RECETTES,
             'categories_depenses' => self::CATEGORIES_DEPENSES,
+            'sacrement_prepare' => self::SACREMENT_PREPARE,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."\n";
     }
 }

@@ -27,6 +27,15 @@
                 </select></div>
         @endif
     @endforeach
+    @foreach($def['champs'] as $champ)
+        @if($champ['type'] === 'annee')
+            <div><label for="f-{{ $champ['nom'] }}">{{ $champ['label'] }}</label>
+                <select id="f-{{ $champ['nom'] }}" name="{{ $champ['nom'] }}">
+                    <option value="">Toutes</option>
+                    @foreach($annees as $a)<option value="{{ $a }}" @selected(request($champ['nom']) === $a)>{{ $a }}</option>@endforeach
+                </select></div>
+        @endif
+    @endforeach
     @if($dateChamp)
         <div><label for="du">Du</label><input type="date" id="du" name="du" value="{{ request('du') }}"></div>
         <div><label for="au">Au</label><input type="date" id="au" name="au" value="{{ request('au') }}"></div>

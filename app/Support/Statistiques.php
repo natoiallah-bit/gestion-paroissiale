@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Catechiste;
 use App\Models\Ceb;
 use App\Models\Depot;
 use App\Models\Fidele;
@@ -47,6 +48,7 @@ class Statistiques
         return compact('resume', 'parType', 'activites', 'annonces', 'finances') + [
             'secteurs' => ! $user->estLimiteAUnSecteur() && ! $secteurId && Ressources::peutLire($user, 'secteurs') && $user->estAdmin() ? self::parSecteur($user) : null,
             'comptes' => Ressources::peutLire($user, 'operations') ? self::comptes($user, $secteurId) : null,
+            'catechese' => Ressources::peutLire($user, 'groupes') ? self::catechese($user, $secteurId) : null,
         ];
     }
 
@@ -67,6 +69,59 @@ class Statistiques
             'depenses' => $depenses,
             'solde' => $recettes - $depenses,
             'par_categorie' => $lignes->map(fn ($l) => ['sens' => $l->sens, 'categorie' => $l->categorie, 'total' => (int) $l->total, 'n' => (int) $l->n])->values()->all(),
+        ];
+    }
+
+    /**
+     * Catéchèse d'une année pastorale : groupes, catéchistes, inscrits par niveau et résultat,
+     * séances et taux de présence ; une ligne par secteur pour ceux qui voient tout le vicariat.
+     */
+    public static function catechese(User $user, ?int $secteurId = null, ?string $annee = null): array
+    {
+        $annee ??= Ressources::anneePastorale();
+        $groupes = self::portee('groupes', $user, $secteurId)->where('annee', $annee)->get(['id', 'secteur_id', 'niveau']);
+        $ids = $groupes->pluck('id');
+        $inscriptions = self::portee('inscriptions', $user, $secteurId)->whereIn('groupe_id', $ids)->get(['id', 'groupe_id', 'secteur_id', 'statut']);
+        $niveaux = $groupes->pluck('niveau', 'id');
+
+        $parNiveau = [];
+        foreach (Ressources::NIVEAUX_CATECHESE as $cle => $libelle) {
+            $deNiveau = $inscriptions->filter(fn ($i) => ($niveaux[$i->groupe_id] ?? null) === $cle);
+            $parNiveau[$cle] = ['libelle' => $libelle, 'groupes' => $groupes->where('niveau', $cle)->count(), 'total' => $deNiveau->count()]
+                + array_map(fn ($lib) => 0, Ressources::STATUTS_INSCRIPTION);
+            foreach ($deNiveau->groupBy('statut') as $statut => $liste) {
+                $parNiveau[$cle][$statut] = $liste->count();
+            }
+        }
+
+        $seances = self::portee('seances', $user, $secteurId)->whereIn('groupe_id', $ids);
+        $presents = (int) (clone $seances)->sum('presents');
+        $absents = (int) (clone $seances)->sum('absents');
+
+        $parSecteur = null;
+        if (! $user->estLimiteAUnSecteur() && ! $secteurId) {
+            $parSecteur = [];
+            foreach (Secteur::orderBy('nom')->get() as $s) {
+                $parSecteur[] = [
+                    'secteur' => $s,
+                    'groupes' => $groupes->where('secteur_id', $s->id)->count(),
+                    'catechistes' => Catechiste::where('secteur_id', $s->id)->where('statut', 'actif')->count(),
+                    'inscrits' => $inscriptions->where('secteur_id', $s->id)->count(),
+                    'admis' => $inscriptions->where('secteur_id', $s->id)->where('statut', 'admis')->count(),
+                ];
+            }
+        }
+
+        return [
+            'annee' => $annee,
+            'groupes' => $groupes->count(),
+            'catechistes' => self::portee('catechistes', $user, $secteurId)->where('statut', 'actif')->count(),
+            'inscrits' => $inscriptions->count(),
+            'admis' => $inscriptions->where('statut', 'admis')->count(),
+            'seances' => (clone $seances)->count(),
+            'presence' => $presents + $absents > 0 ? (int) round($presents / ($presents + $absents) * 100) : null,
+            'par_niveau' => $parNiveau,
+            'par_secteur' => $parSecteur,
         ];
     }
 

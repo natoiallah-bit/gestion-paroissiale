@@ -15,7 +15,7 @@ class RapportController extends Controller
         $user = $request->user();
         $donnees = $request->validate([
             'du' => 'nullable|date', 'au' => 'nullable|date|after_or_equal:du',
-            'secteur' => 'nullable|integer', 'annee' => 'nullable|integer|min:1900|max:2200',
+            'secteur' => 'nullable|integer', 'annee' => 'nullable|integer|min:1900|max:2200', 'annee_pastorale' => ['nullable', 'regex:/^\\d{4}-\\d{4}$/'],
         ]);
 
         $du = Carbon::parse($donnees['du'] ?? today()->startOfYear());
@@ -30,6 +30,8 @@ class RapportController extends Controller
             'finances' => Ressources::peutLire($user, 'operations') ? Statistiques::bilan($user, $du, $au, $secteurId) : null,
             'sacrements' => Ressources::peutLire($user, 'sacrements') ? Statistiques::sacrementsParAnnee($user, $annee, $secteurId) : null,
             'effectifs' => Ressources::peutLire($user, 'fideles') ? Statistiques::tableauDeBord($user, $secteurId)['resume'] : null,
+            'anneePastorale' => $donnees['annee_pastorale'] ?? Ressources::anneePastorale(),
+            'catechese' => Ressources::peutLire($user, 'groupes') ? Statistiques::catechese($user, $secteurId, $donnees['annee_pastorale'] ?? null) : null,
             'comptes' => Ressources::peutLire($user, 'operations') ? Statistiques::comptes($user, $secteurId) : null,
             'parSecteur' => $user->estAdmin() && ! $secteurId ? Statistiques::parSecteur($user) : null,
         ]);

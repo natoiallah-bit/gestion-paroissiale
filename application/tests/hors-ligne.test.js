@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { enregistrerFiche } from '../src/actions.js';
 import { db } from '../src/db.js';
 import { appliquer, regrouper } from '../src/sync.js';
-import { comptes, tableauDeBord } from '../src/statistiques.js';
-import { cumulsDepots } from '../src/ressources.js';
+import { catechese, comptes, tableauDeBord } from '../src/statistiques.js';
+import { anneePastorale, cumulsDepots } from '../src/ressources.js';
 
 const admin = { utilisateur: { uuid: 'u-1', role: 'admin', secteur_uuid: null }, appareil: { code: 'A3' } };
 const secretaire = { utilisateur: { uuid: 'u-2', role: 'secretaire', secteur_uuid: 'p-a' }, appareil: { code: 'A3' } };
@@ -169,5 +169,70 @@ describe('comptes : CEB → secteur → vicariat', () => {
     expect(cumuls.get('d1')).toEqual({ cumul_secteur: 10000, total_vicariat: 10000 });
     expect(cumuls.get('d2')).toEqual({ cumul_secteur: 20000, total_vicariat: 30000 });
     expect(cumuls.get('d3')).toEqual({ cumul_secteur: 15000, total_vicariat: 35000 });
+  });
+});
+
+describe('catéchèse hors ligne', () => {
+  const annee = anneePastorale();
+  const resp = { utilisateur: { uuid: 'u-4', role: 'catechese', secteur_uuid: 'p-a' }, appareil: { code: 'A3' } };
+
+  async function preparer() {
+    await db.fideles.bulkPut([
+      { uuid: 'f1', secteur_uuid: 'p-a', nom: 'Ngarbaye', prenoms: 'Esther', sexe: 'F', statut: 'actif', date_naissance: '2014-03-02' },
+      { uuid: 'f2', secteur_uuid: 'p-a', nom: 'Defunt', prenoms: 'X', sexe: 'M', statut: 'decede' },
+      { uuid: 'f3', secteur_uuid: 'p-b', nom: 'Ailleurs', prenoms: 'Y', sexe: 'M', statut: 'actif' },
+    ]);
+    const catechiste = await enregistrerFiche('catechistes', { secteur_uuid: 'p-a', nom: 'Yao', prenoms: 'Marie', formation: 'initiale', statut: 'actif' }, resp);
+    const groupe = await enregistrerFiche('groupes', { secteur_uuid: 'p-a', annee, nom: 'Groupe Saint-Pierre', niveau: 'communion', catechiste_uuid: catechiste.uuid }, resp);
+    return { catechiste, groupe };
+  }
+
+  it("l'année pastorale va de septembre à août", () => {
+    expect(anneePastorale(new Date(2026, 9, 14))).toBe('2026-2027');
+    expect(anneePastorale(new Date(2026, 5, 1))).toBe('2025-2026');
+  });
+
+  it('contrôle l\'année du groupe et le secteur du catéchiste', async () => {
+    await preparer();
+    await expect(enregistrerFiche('groupes', { secteur_uuid: 'p-a', annee: '2026-2028', nom: 'G', niveau: 'eveil' }, resp)).rejects.toThrow(/deux années/);
+    await expect(enregistrerFiche('groupes', { secteur_uuid: 'p-a', annee: '2026', nom: 'G', niveau: 'eveil' }, resp)).rejects.toThrow(/format attendu/);
+    const etranger = await db.catechistes.put({ uuid: 'cat-b', secteur_uuid: 'p-b', nom: 'Z', prenoms: 'Z', statut: 'actif' });
+    await expect(enregistrerFiche('groupes', { secteur_uuid: 'p-a', annee, nom: 'G', niveau: 'eveil', catechiste_uuid: etranger }, resp)).rejects.toThrow(/autre secteur/);
+  });
+
+  it('inscription : un seul groupe par année, fidèle actif et du même secteur', async () => {
+    const { groupe } = await preparer();
+    const autre = await enregistrerFiche('groupes', { secteur_uuid: 'p-a', annee, nom: 'Groupe B', niveau: 'eveil' }, resp);
+    const inscrire = (fidele, g) => enregistrerFiche('inscriptions', { fidele_uuid: fidele, groupe_uuid: g.uuid, date_inscription: '2026-10-01', statut: 'inscrit' }, resp);
+
+    const i = await inscrire('f1', groupe);
+    expect(i.secteur_uuid).toBe('p-a');
+    await expect(inscrire('f1', autre)).rejects.toThrow(/déjà inscrit/);
+    await expect(inscrire('f2', autre)).rejects.toThrow(/fidèle actif/);
+    await expect(inscrire('f3', autre)).rejects.toThrow(/secteur/);
+  });
+
+  it('le sacrement reçu admet l\'inscrit au niveau correspondant, et les statistiques suivent', async () => {
+    const { groupe, catechiste } = await preparer();
+    await enregistrerFiche('inscriptions', { fidele_uuid: 'f1', groupe_uuid: groupe.uuid, date_inscription: '2026-10-01', statut: 'inscrit' }, resp);
+    await enregistrerFiche('seances', { groupe_uuid: groupe.uuid, date_seance: '2026-10-05', theme: 'La prière', presents: 12, absents: 4, catechiste_uuid: catechiste.uuid }, resp);
+
+    const secretaire = { utilisateur: { uuid: 'u-2', role: 'secretaire', secteur_uuid: 'p-a' }, appareil: { code: 'A3' } };
+    await enregistrerFiche('sacrements', { fidele_uuid: 'f1', type: 'bapteme', date_sacrement: '2014-06-01' }, secretaire);
+    expect((await db.inscriptions.toArray())[0].statut).toBe('inscrit');
+    await enregistrerFiche('sacrements', { fidele_uuid: 'f1', type: 'eucharistie', date_sacrement: '2026-10-10' }, secretaire);
+    expect((await db.inscriptions.toArray())[0].statut).toBe('admis');
+
+    const c = await catechese(resp);
+    expect(c).toMatchObject({ groupes: 1, catechistes: 1, inscrits: 1, admis: 1, seances: 1, presence: 75 });
+    expect(c.parNiveau.communion.admis).toBe(1);
+    expect(c.parSecteur).toBeNull();
+  });
+
+  it('une séance ne peut pas être dans le futur ni dans le groupe d\'un autre secteur', async () => {
+    const { groupe } = await preparer();
+    await expect(enregistrerFiche('seances', { groupe_uuid: groupe.uuid, date_seance: '2999-01-01', theme: 'T', presents: 1, absents: 0 }, resp)).rejects.toThrow(/futur/);
+    await db.groupes.put({ uuid: 'g-b', secteur_uuid: 'p-b', annee, nom: 'Chez eux', niveau: 'eveil' });
+    await expect(enregistrerFiche('seances', { groupe_uuid: 'g-b', date_seance: '2026-10-05', theme: 'T', presents: 1, absents: 0 }, resp)).rejects.toThrow(/secteur/);
   });
 });

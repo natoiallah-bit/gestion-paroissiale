@@ -35,6 +35,11 @@
 </div>
 @endif
 
+@if($catechese)
+    <div class="entete"><h2 style="margin:0">Catéchèse</h2><a href="{{ route('rapports.index') }}" class="btn btn-leger btn-petit">Détail</a></div>
+    @include('partials.catechese')
+@endif
+
 @if($comptes)
     <div class="entete"><h2 style="margin:0">Comptes</h2><a href="{{ route('rapports.index') }}" class="btn btn-leger btn-petit">Détail par CEB</a></div>
     <div class="grille">

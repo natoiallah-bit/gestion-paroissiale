@@ -23,7 +23,7 @@ export function useEtatSync() {
 export function useCartes() {
   return useRequete(async () => {
     const carte = async (t) => new Map((await db.table(t).toArray()).map((f) => [f.uuid, f]));
-    const [secteurs, cebs, mouvements, fideles] = await Promise.all(['secteurs', 'cebs', 'mouvements', 'fideles'].map(carte));
-    return { secteurs, cebs, mouvements, fideles };
+    const [secteurs, cebs, mouvements, fideles, catechistes, groupes] = await Promise.all(['secteurs', 'cebs', 'mouvements', 'fideles', 'catechistes', 'groupes'].map(carte));
+    return { secteurs, cebs, mouvements, fideles, catechistes, groupes };
   }, [], null);
 }

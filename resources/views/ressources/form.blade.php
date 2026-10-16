@@ -47,6 +47,9 @@
             @case('date')
                 <input type="date" id="{{ $nom }}" name="{{ $nom }}" value="{{ $valeur }}" @required($requis)>
                 @break
+            @case('annee')
+                <input type="text" id="{{ $nom }}" name="{{ $nom }}" value="{{ $valeur }}" pattern="\d{4}-\d{4}" placeholder="2026-2027" maxlength="9" @required($requis)>
+                @break
             @case('heure')
                 <input type="time" id="{{ $nom }}" name="{{ $nom }}" value="{{ $valeur }}">
                 @break

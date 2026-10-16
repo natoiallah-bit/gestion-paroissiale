@@ -18,6 +18,10 @@ class Fidele extends Fiche
 
     public function obstacleSuppression(): ?string
     {
+        if (Inscription::where('fidele_id', $this->id)->exists()) {
+            return 'Ce fidèle est inscrit à la catéchèse : mettez-le en « Transféré » ou « Décédé » plutôt que de le supprimer.';
+        }
+
         return $this->sacrements()->exists() ? 'Ce fidèle a des sacrements enregistrés : mettez-le en « Décédé » ou « Transféré » plutôt que de le supprimer.' : null;
     }
 

@@ -13,6 +13,7 @@
     @endif
     <div><label for="du">Finances du</label><input type="date" id="du" name="du" value="{{ $du->toDateString() }}"></div>
     <div><label for="au">au</label><input type="date" id="au" name="au" value="{{ $au->toDateString() }}"></div>
+    @if($catechese)<div><label for="annee_pastorale">Année pastorale (catéchèse)</label><input type="text" id="annee_pastorale" name="annee_pastorale" value="{{ $anneePastorale }}" pattern="\d{4}-\d{4}" maxlength="9" style="width:110px"></div>@endif
     <div><label for="annee">Sacrements de l'année</label><input type="number" id="annee" name="annee" value="{{ $annee }}" min="1900" max="2200"></div>
     <button class="btn">Afficher</button>
 </form>
@@ -61,6 +62,11 @@
         </tbody>
     </table>
 </div>
+@endif
+
+@if($catechese)
+<h2>Catéchèse</h2>
+@include('partials.catechese', ['detail' => true])
 @endif
 
 @if($comptes)

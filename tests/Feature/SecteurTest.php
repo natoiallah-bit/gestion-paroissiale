@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Catechiste;
 use App\Models\Ceb;
 use App\Models\Depot;
 use App\Models\Fidele;
+use App\Models\GroupeCatechese;
+use App\Models\Inscription;
 use App\Models\Operation;
 use App\Models\Sacrement;
+use App\Models\Seance;
 use App\Models\Secteur;
 use App\Models\User;
 use App\Support\Ressources;
@@ -236,6 +240,147 @@ class SecteurTest extends TestCase
         $this->actingAs($tresorierA)->get('/operations/'.$centrale->id)->assertNotFound();
         $this->actingAs($tresorierA)->delete('/operations/'.$centrale->id)->assertNotFound();
         $this->assertDatabaseHas('operations', ['id' => $centrale->id]);
+    }
+
+    /** Un secteur avec un fidèle actif, un catéchiste et un groupe de catéchèse (année en cours) */
+    private function catechese(string $niveau = 'communion'): array
+    {
+        $s = $this->secteur('Secteur C');
+        $fidele = $this->fidele($s, ['nom' => 'Ngarbaye', 'prenoms' => 'Esther', 'date_naissance' => '2014-03-02']);
+        $catechiste = Catechiste::create(['secteur_id' => $s->id, 'nom' => 'Yao', 'prenoms' => 'Marie', 'formation' => 'initiale', 'statut' => 'actif']);
+        $groupe = GroupeCatechese::create([
+            'secteur_id' => $s->id, 'catechiste_id' => $catechiste->id, 'annee' => Ressources::anneePastorale(), 'nom' => 'Groupe Saint-Pierre', 'niveau' => $niveau,
+        ]);
+
+        return [$s, $fidele, $catechiste, $groupe, User::factory()->create(['role' => 'catechese', 'secteur_id' => $s->id])];
+    }
+
+    public function test_catechese_inscription_un_seul_groupe_par_annee_et_meme_secteur(): void
+    {
+        [$s, $fidele, , $groupe, $resp] = $this->catechese();
+        $autreGroupe = GroupeCatechese::create(['secteur_id' => $s->id, 'annee' => $groupe->annee, 'nom' => 'Groupe B', 'niveau' => 'eveil']);
+        $autre = $this->secteur('Autre secteur');
+        $groupeAutre = GroupeCatechese::create(['secteur_id' => $autre->id, 'annee' => $groupe->annee, 'nom' => 'Groupe X', 'niveau' => 'eveil']);
+        $donnees = ['fidele_uuid' => $fidele->uuid, 'groupe_uuid' => $groupe->uuid, 'date_inscription' => today()->toDateString(), 'statut' => 'inscrit'];
+
+        $this->actingAs($resp)->post('/inscriptions', $donnees)->assertSessionHasNoErrors();
+        $this->assertSame($s->id, Inscription::first()->secteur_id);
+        // Même année : pas dans un deuxième groupe
+        $this->actingAs($resp)->post('/inscriptions', ['groupe_uuid' => $autreGroupe->uuid] + $donnees)->assertSessionHasErrors('groupe_uuid');
+        // Groupe d'un autre secteur
+        $this->actingAs($resp)->post('/inscriptions', ['groupe_uuid' => $groupeAutre->uuid] + $donnees)->assertSessionHasErrors();
+        $this->assertSame(1, Inscription::count());
+
+        // Un fidèle décédé ne s'inscrit pas
+        $mort = $this->fidele($s, ['statut' => 'decede', 'nom' => 'Defunt']);
+        $this->actingAs($resp)->post('/inscriptions', ['fidele_uuid' => $mort->uuid, 'groupe_uuid' => $autreGroupe->uuid] + $donnees)->assertSessionHasErrors('fidele_uuid');
+    }
+
+    public function test_annee_pastorale_et_catechiste_du_meme_secteur(): void
+    {
+        [$s, , $catechiste, , $resp] = $this->catechese();
+        $base = ['nom' => 'Groupe Z', 'niveau' => 'eveil'];
+
+        $this->actingAs($resp)->post('/groupes', $base + ['annee' => '2026-2028'])->assertSessionHasErrors('annee');
+        $this->actingAs($resp)->post('/groupes', $base + ['annee' => '2026'])->assertSessionHasErrors('annee');
+        $this->actingAs($resp)->post('/groupes', $base + ['annee' => '2026-2027', 'catechiste_uuid' => $catechiste->uuid])->assertSessionHasNoErrors();
+
+        $autre = Catechiste::create(['secteur_id' => $this->secteur('Y')->id, 'nom' => 'Z', 'prenoms' => 'Z', 'statut' => 'actif']);
+        $this->actingAs($resp)->post('/groupes', $base + ['annee' => '2026-2027', 'catechiste_uuid' => $autre->uuid])->assertSessionHasErrors('catechiste_uuid');
+
+        $this->assertSame('2026-2027', Ressources::anneePastorale(new \DateTime('2026-10-14')));
+        $this->assertSame('2025-2026', Ressources::anneePastorale(new \DateTime('2026-06-01')));
+    }
+
+    public function test_le_sacrement_recu_admet_l_inscrit_au_niveau_correspondant(): void
+    {
+        [$s, $fidele, , $groupe, $resp] = $this->catechese('communion');
+        $this->actingAs($resp)->post('/inscriptions', ['fidele_uuid' => $fidele->uuid, 'groupe_uuid' => $groupe->uuid, 'date_inscription' => today()->toDateString(), 'statut' => 'inscrit']);
+        $secretaire = $this->secretaire($s);
+
+        // Un baptême ne valide pas une préparation à la première communion...
+        $this->actingAs($secretaire)->post('/sacrements', ['fidele_uuid' => $fidele->uuid, 'type' => 'bapteme', 'date_sacrement' => '2014-06-01']);
+        $this->assertSame('inscrit', Inscription::first()->statut);
+        // ... la première communion, oui
+        $this->actingAs($secretaire)->post('/sacrements', ['fidele_uuid' => $fidele->uuid, 'type' => 'eucharistie', 'date_sacrement' => today()->toDateString()]);
+        $this->assertSame('admis', Inscription::first()->statut);
+    }
+
+    public function test_l_inscription_saisie_apres_le_sacrement_est_deja_admise(): void
+    {
+        [$s, $fidele, , $groupe, $resp] = $this->catechese('communion');
+        $this->actingAs($this->secretaire($s))->post('/sacrements', ['fidele_uuid' => $fidele->uuid, 'type' => 'eucharistie', 'date_sacrement' => today()->toDateString()]);
+        $this->actingAs($resp)->post('/inscriptions', ['fidele_uuid' => $fidele->uuid, 'groupe_uuid' => $groupe->uuid, 'date_inscription' => today()->subDays(3)->toDateString(), 'statut' => 'inscrit']);
+        $this->assertSame('admis', Inscription::first()->statut);
+    }
+
+    public function test_seances_presence_et_statistiques(): void
+    {
+        [$s, $fidele, $catechiste, $groupe, $resp] = $this->catechese();
+        $this->actingAs($resp)->post('/inscriptions', ['fidele_uuid' => $fidele->uuid, 'groupe_uuid' => $groupe->uuid, 'date_inscription' => today()->toDateString(), 'statut' => 'inscrit']);
+        $seance = ['groupe_uuid' => $groupe->uuid, 'catechiste_uuid' => $catechiste->uuid, 'theme' => 'La prière', 'presents' => 12, 'absents' => 4];
+
+        $this->actingAs($resp)->post('/seances', $seance + ['date_seance' => today()->toDateString()])->assertSessionHasNoErrors();
+        $this->actingAs($resp)->post('/seances', ['theme' => 'Le baptême', 'presents' => 8, 'absents' => 0, 'date_seance' => today()->subDay()->toDateString()] + $seance)->assertSessionHasNoErrors();
+        $this->actingAs($resp)->post('/seances', $seance + ['date_seance' => today()->addDays(5)->toDateString()])->assertSessionHasErrors('date_seance');
+        $this->assertSame($s->id, Seance::first()->secteur_id);
+
+        $c = Statistiques::catechese($resp);
+        $this->assertSame(1, $c['groupes']);
+        $this->assertSame(1, $c['catechistes']);
+        $this->assertSame(1, $c['inscrits']);
+        $this->assertSame(2, $c['seances']);
+        $this->assertSame(83, $c['presence']); // 20 présents sur 24
+        $this->assertSame(1, $c['par_niveau']['communion']['inscrit']);
+        $this->assertNull($c['par_secteur']); // un compte de secteur ne voit pas les autres
+
+        $this->actingAs($resp)->get('/')->assertOk()->assertSee('Catéchèse')->assertSee('présence moyenne 83 %');
+        $this->actingAs($resp)->get('/rapports')->assertOk()->assertSee('Préparation à la première communion');
+    }
+
+    public function test_droits_et_portee_de_la_catechese(): void
+    {
+        [$s, $fidele, , $groupe, $resp] = $this->catechese();
+        $autre = $this->secteur('Autre');
+        $groupeAutre = GroupeCatechese::create(['secteur_id' => $autre->id, 'annee' => $groupe->annee, 'nom' => 'Chez eux', 'niveau' => 'eveil']);
+        $tresorier = User::factory()->create(['role' => 'tresorier', 'secteur_id' => $s->id]);
+        $coordination = User::factory()->create(['role' => 'catechese']); // sans secteur : tout le vicariat
+
+        // Le trésorier n'a pas accès à la catéchèse ; le responsable ne voit pas les finances
+        $this->actingAs($tresorier)->get('/groupes')->assertForbidden();
+        $this->actingAs($resp)->get('/operations')->assertForbidden();
+        // Le responsable de secteur ne voit que son secteur
+        $this->actingAs($resp)->get('/groupes')->assertOk()->assertSee('Groupe Saint-Pierre')->assertDontSee('Chez eux');
+        $this->actingAs($resp)->get('/groupes/'.$groupeAutre->id)->assertNotFound();
+        // Mais la coordination vicariale voit tout, et ne modifie pas les fiches pastorales
+        $this->actingAs($coordination)->get('/groupes')->assertOk()->assertSee('Chez eux')->assertSee('Groupe Saint-Pierre');
+        $this->actingAs($coordination)->post('/fideles', ['nom' => 'X', 'prenoms' => 'Y', 'sexe' => 'M', 'statut' => 'actif', 'secteur_uuid' => $s->uuid])->assertForbidden();
+
+        // Suppressions protégées
+        $this->actingAs($resp)->post('/inscriptions', ['fidele_uuid' => $fidele->uuid, 'groupe_uuid' => $groupe->uuid, 'date_inscription' => today()->toDateString(), 'statut' => 'inscrit']);
+        $this->actingAs($resp)->delete('/groupes/'.$groupe->id)->assertSessionHasErrors('suppression');
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin)->delete('/fideles/'.$fidele->id)->assertSessionHasErrors('suppression');
+        $catechiste = Catechiste::first();
+        $this->actingAs($resp)->delete('/catechistes/'.$catechiste->id)->assertRedirect();
+        $this->assertNull($groupe->fresh()->catechiste_id); // le groupe est détaché proprement
+    }
+
+    public function test_les_pages_de_la_catechese_s_affichent(): void
+    {
+        [, $fidele, $catechiste, $groupe, $resp] = $this->catechese();
+        $inscription = Inscription::create(['fidele_id' => $fidele->id, 'groupe_id' => $groupe->id, 'secteur_id' => $groupe->secteur_id, 'date_inscription' => today()->toDateString(), 'statut' => 'inscrit']);
+        $seance = Seance::create(['groupe_id' => $groupe->id, 'secteur_id' => $groupe->secteur_id, 'date_seance' => today()->toDateString(), 'theme' => 'Thème', 'presents' => 3, 'absents' => 1]);
+
+        foreach (['catechistes' => $catechiste, 'groupes' => $groupe, 'inscriptions' => $inscription, 'seances' => $seance] as $cle => $fiche) {
+            $this->actingAs($resp)->get("/$cle")->assertOk();
+            $this->actingAs($resp)->get("/$cle/nouveau")->assertOk();
+            $this->actingAs($resp)->get("/$cle/{$fiche->id}")->assertOk();
+            $this->actingAs($resp)->get("/$cle/{$fiche->id}/modifier")->assertOk();
+        }
+        $this->actingAs($resp)->get('/inscriptions?q=Ngarbaye')->assertOk()->assertSee('Ngarbaye');
+        $this->actingAs($resp)->get('/groupes?annee='.$groupe->annee)->assertOk()->assertSee('Groupe Saint-Pierre');
+        $this->actingAs($resp)->get('/fideles/'.$fidele->id)->assertOk()->assertSee('Catéchèse');
     }
 
     public function test_la_description_des_fiches_de_l_application_est_a_jour(): void

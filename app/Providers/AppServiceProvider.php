@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Models\Sacrement;
 use App\Models\Secteur;
 use App\Models\User;
 use App\Models\Vicariat;
@@ -38,7 +37,12 @@ class AppServiceProvider extends ServiceProvider
             }
         }
         User::resolveRelationUsing('secteur', fn ($m) => $m->belongsTo(Secteur::class, 'secteur_id'));
-        Sacrement::resolveRelationUsing('secteur', fn ($m) => $m->belongsTo(Secteur::class, 'secteur_id'));
+        // Sacrements, inscriptions, séances : le secteur est celui de la fiche mère
+        foreach (Ressources::toutes() as $def) {
+            if ($def['portee'] === 'derivee') {
+                $def['modele']::resolveRelationUsing('secteur', fn ($m) => $m->belongsTo(Secteur::class, 'secteur_id'));
+            }
+        }
 
         // Nom du vicariat affiché dans toutes les pages (une seule requête par page)
         View::composer(['layouts.app', 'auth.login'], function ($view) {
