@@ -135,7 +135,7 @@
             <div class="menu-label">Communauté</div>
             {!! $entree('fideles') !!}
             {!! $entree('cebs') !!}
-            {!! $entree('mouvements', 'Mouvements & services') !!}
+            {!! $entree('mouvements', 'Mouvements & pastorales') !!}
             {!! $entree('sacrements') !!}
         @endif
 
@@ -145,7 +145,8 @@
 
         @if(\App\Support\Ressources::peutLire($u, 'operations'))
             <div class="menu-label">Finances</div>
-            {!! $entree('operations', 'Quêtes & dépenses') !!}
+            {!! $entree('operations', 'Comptes & opérations') !!}
+            {!! $entree('depots', 'Dépôts au vicariat') !!}
         @endif
         {!! $lien('rapports.index', 'Rapports') !!}
 

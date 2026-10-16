@@ -32,7 +32,7 @@ class DemoSeeder extends Seeder
             'name' => 'Trésorier du vicariat', 'password' => 'demo1234', 'role' => 'tresorier', 'actif' => true,
         ]);
 
-        foreach (['Secteur 1', 'Secteur 2', 'Secteur 3'] as $n => $nom) {
+        foreach (['Koundoul Nord', 'Koundoul Sud', 'Ngama'] as $n => $nom) {
             $s = Secteur::firstOrCreate(['nom' => $nom], ['responsable' => $prenoms[array_rand($prenoms)].' '.$noms[array_rand($noms)]]);
             $slug = 'secteur'.($n + 1);
 

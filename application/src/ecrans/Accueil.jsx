@@ -36,7 +36,7 @@ export function Accueil() {
           <div class="stat"><div class="lib">Fidèles (actifs)</div><div class="val">{nombre(r.fideles)}</div><div class="det">{r.hommes} hommes · {r.femmes} femmes</div></div>
           <div class="stat"><div class="lib">Familles</div><div class="val">{nombre(r.familles)}</div></div>
           <div class="stat"><div class="lib">CEB</div><div class="val">{r.cebs}</div></div>
-          <div class="stat"><div class="lib">Mouvements & services</div><div class="val">{r.mouvements}</div><div class="det">{nombre(r.membresMouvements)} membres déclarés</div></div>
+          <div class="stat"><div class="lib">Mouvements & pastorales</div><div class="val">{r.mouvements}</div><div class="det">{nombre(r.membresMouvements)} membres déclarés</div></div>
           <div class="stat"><div class="lib">Sacrements en {d.annee}</div><div class="val">{r.sacrementsAnnee}</div>
             <div class="det">{Object.entries(d.parType).map(([t, n]) => `${d.sacrementsLibelles[t]} ${n}`).join(' · ')}</div></div>
         </div>

@@ -1,7 +1,26 @@
-# Gestion paroissiale et vicariale
+# Gestion du vicariat Christ-Roi de Koundoul Ngama
 
-Gestion d'un vicariat et de ses secteurs, en français, montants en FCFA : fidèles et familles, CEB,
-mouvements et services, sacrements, finances, annonces et programme des activités.
+Archidiocèse de N'Djamena · Doyenné de N'Djamena Sud.
+
+Gestion du vicariat et de ses secteurs, en français, montants en FCFA : fidèles et familles, CEB, mouvements et
+pastorales, sacrements, comptes et dépôts, annonces et programme des activités.
+
+## Organisation reprise par l'application
+
+```
+Vicariat Christ-Roi de Koundoul Ngama
+ └─ Secteurs
+     ├─ CEB (communautés ecclésiales de base) ── chacune a un compte au conseil économique du secteur
+     ├─ Mouvements des jeunes, des adultes
+     └─ Pastorales (liturgique, familiale…) et services
+```
+
+**Les comptes, du bas vers le haut :**
+1. **CEB** : chaque CEB ouvre un compte au conseil économique du secteur (cotisations, dépôts, retraits).
+2. **Secteur** : le secteur compile les comptes de ses CEB et ses propres opérations.
+3. **Vicariat** : tous les secteurs **déposent leur argent à la caisse centrale du vicariat**. Chaque dépôt est enregistré
+   (date, montant, n° de reçu) et les montants sont **recalculés à chaque dépôt** : cumul déposé par le secteur et total reçu
+   par le vicariat. Le conseil économique du vicariat compile l'ensemble : ce que chaque secteur a collecté, déjà déposé et **reste à déposer**.
 
 Même logique que *gestion-de-commerce* — trois parties :
 
@@ -36,21 +55,23 @@ Compte administrateur créé par défaut : `admin@vicariat.local` / `changer-ce-
 
 ## Mise en route
 
-1. **Paramètres** : nom du vicariat, diocèse (utilisés sur les extraits de registre).
+1. **Paramètres** : archidiocèse, doyenné, responsable du vicariat (utilisés sur les extraits de registre).
 2. **Secteurs** : créer les secteurs du vicariat.
-3. **Utilisateurs** : créer un secrétaire et un trésorier par secteur.
-4. Les secrétaires saisissent CEB, fidèles, sacrements, mouvements, annonces et programme.
+3. **Utilisateurs** : un secrétaire et un trésorier par secteur ; un trésorier **sans secteur** tient la caisse centrale du vicariat.
+4. Les secrétaires saisissent CEB, fidèles, sacrements, mouvements, pastorales, annonces et programme.
+5. Les trésoriers de secteur ouvrent les comptes des CEB (menu **Comptes et opérations**) et enregistrent les **dépôts au vicariat**.
 
 Pour essayer avec des données d'exemple : `php artisan db:seed --class=DemoSeeder`
-(comptes `secretaire.saintpaul@vicariat.local`, `tresorier.saintpaul@vicariat.local`… / `demo1234`).
+(comptes `secretaire.secteur1@vicariat.local`, `tresorier.secteur1@vicariat.local`, `tresorier.vicariat@vicariat.local`… / `demo1234`).
 
 ## Qui voit quoi
 
 | Rôle | Accès |
 |---|---|
-| **Administrateur** (vicariat) | Tout le vicariat : toutes les secteurs, utilisateurs, appareils, paramètres, statistiques consolidées |
-| **Secrétaire** (d'un secteur) | CEB, fidèles, mouvements, sacrements, annonces, programme **de son secteur** ; lecture des annonces et activités du vicariat |
-| **Trésorier** (d'un secteur) | Finances **de son secteur** ; lecture des annonces et du programme |
+| **Administrateur** (vicariat) | Tout le vicariat : tous les secteurs, utilisateurs, appareils, paramètres, comptes consolidés |
+| **Secrétaire** (d'un secteur) | CEB, fidèles, mouvements, pastorales, sacrements, annonces, programme **de son secteur** ; lecture des annonces et activités du vicariat |
+| **Trésorier** (d'un secteur) | Comptes des CEB, opérations et dépôts **de son secteur** ; il ne voit ni les autres secteurs ni la caisse centrale |
+| **Trésorier du vicariat** (compte sans secteur) | Comptes de tous les secteurs, dépôts reçus, caisse centrale, compilation du vicariat |
 
 Un compte rattaché à un secteur ne voit et ne modifie que ce secteur, sur le site comme dans l'application
 (le serveur filtre les données envoyées à chaque appareil).
@@ -61,12 +82,13 @@ Un compte rattaché à un secteur ne voit et ne modifie que ce secteur, sur le s
 |---|---|
 | **Fidèles & familles** | Registre des paroissiens (identité, famille, CEB, situation actif / décédé / transféré), recherche, filtres |
 | **CEB** | Communautés ecclésiales de base par secteur, responsable, nombre de fidèles |
-| **Mouvements & services** | Légion de Marie, chorale, servants de messe… avec responsable et nombre de membres |
+| **Mouvements & pastorales** | Mouvements des jeunes, des adultes, pastorales, services : responsable et nombre de membres |
 | **Sacrements** | Baptême, première communion, confirmation, mariage, obsèques ; n° de registre ; **extrait de registre imprimable** |
-| **Finances** | Quêtes, denier du culte, intentions de messe, dons, dépenses ; bilan par période et par catégorie |
+| **Comptes & opérations** | Compte de chaque CEB au conseil économique du secteur, compte du secteur, caisse centrale du vicariat ; cotisations, quêtes, dons, dépenses |
+| **Dépôts au vicariat** | Dépôt de chaque secteur à la caisse centrale ; cumul du secteur et total reçu recalculés à chaque dépôt |
 | **Annonces** | Pour un secteur ou pour tout le vicariat, avec période de validité |
 | **Programme** | Activités de la vie vicariale et paroissiale, avec date, heure, lieu, organisateur |
-| **Tableau de bord & rapports** | Effectifs (hommes / femmes / familles), sacrements de l'année, finances, vue consolidée par secteur |
+| **Tableau de bord & rapports** | Effectifs (hommes / femmes / familles), sacrements de l'année, **compilation des comptes CEB → secteur → vicariat** (compilé, déposé, reste à déposer), vue par secteur |
 
 Règles contrôlées partout (site, application, synchronisation) :
 - baptême, première communion, confirmation et obsèques ne s'enregistrent **qu'une fois** par fidèle ;

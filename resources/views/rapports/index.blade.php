@@ -23,7 +23,7 @@
     <div class="stat"><div class="lib">Fidèles actifs</div><div class="val">{{ number_format($effectifs['fideles'], 0, ',', ' ') }}</div><div class="det">{{ $effectifs['hommes'] }} hommes · {{ $effectifs['femmes'] }} femmes</div></div>
     <div class="stat"><div class="lib">Familles</div><div class="val">{{ $effectifs['familles'] }}</div></div>
     <div class="stat"><div class="lib">CEB</div><div class="val">{{ $effectifs['cebs'] }}</div></div>
-    <div class="stat"><div class="lib">Mouvements & services</div><div class="val">{{ $effectifs['mouvements'] }}</div><div class="det">{{ number_format($effectifs['membres_mouvements'], 0, ',', ' ') }} membres</div></div>
+    <div class="stat"><div class="lib">Mouvements & pastorales</div><div class="val">{{ $effectifs['mouvements'] }}</div><div class="det">{{ number_format($effectifs['membres_mouvements'], 0, ',', ' ') }} membres</div></div>
 </div>
 @endif
 

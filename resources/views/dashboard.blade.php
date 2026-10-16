@@ -19,7 +19,7 @@
     <div class="stat"><div class="lib">Fidèles (actifs)</div><div class="val">{{ number_format($resume['fideles'], 0, ',', ' ') }}</div><div class="det">{{ $resume['hommes'] }} hommes · {{ $resume['femmes'] }} femmes</div></div>
     <div class="stat"><div class="lib">Familles</div><div class="val">{{ number_format($resume['familles'], 0, ',', ' ') }}</div></div>
     <div class="stat"><div class="lib">CEB</div><div class="val">{{ $resume['cebs'] }}</div></div>
-    <div class="stat"><div class="lib">Mouvements & services</div><div class="val">{{ $resume['mouvements'] }}</div><div class="det">{{ number_format($resume['membres_mouvements'], 0, ',', ' ') }} membres déclarés</div></div>
+    <div class="stat"><div class="lib">Mouvements & pastorales</div><div class="val">{{ $resume['mouvements'] }}</div><div class="det">{{ number_format($resume['membres_mouvements'], 0, ',', ' ') }} membres déclarés</div></div>
     <div class="stat"><div class="lib">Sacrements en {{ today()->year }}</div><div class="val">{{ $resume['sacrements_annee'] }}</div>
         <div class="det">@foreach(\App\Support\Ressources::SACREMENTS as $k => $lib)@if(($parType[$k] ?? 0) > 0){{ $lib }} {{ $parType[$k] }} · @endif @endforeach</div></div>
 </div>
