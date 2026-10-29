@@ -32,18 +32,26 @@ Même logique que *gestion-de-commerce* — trois parties :
 
 Les applications Android et Windows sont construites à partir du dossier [`application/`](application/).
 
-## Utiliser en local (sur l'ordinateur du vicariat ou du secteur)
+## Installer le serveur (sur l'ordinateur du vicariat)
 
-Le serveur tourne sur un ordinateur, avec SQLite. Les téléphones s'y connectent par le **Wi-Fi** (pas besoin d'internet, sauf pour l'installation).
+### Méthode simple : le paquet serveur (Windows, rien à installer)
+
+1. Sur la page **Releases** du dépôt, téléchargez `GestionParoissiale-Serveur-….zip`.
+2. Clic droit sur le zip → **Extraire tout** (ne rien lancer depuis l'aperçu du zip).
+3. Double-cliquez sur **`demarrer.bat`**. La première fois, la base de données et le compte administrateur sont créés tout seuls.
+   Le site s'ouvre sur `http://127.0.0.1:8200` et la fenêtre affiche l'adresse à taper dans les téléphones,
+   par exemple `192.168.1.20:8200`. **Laisser cette fenêtre ouverte** pendant que le secteur travaille.
+4. Au premier lancement, Windows demande d'autoriser PHP : cocher **Réseaux privés** et autoriser.
+
+PHP et tous les composants sont **inclus** dans ce paquet (dossier `php`) : aucune installation préalable.
+
+### Méthode développeur : depuis le code source
 
 Prérequis : **PHP 8.3 ou plus** (Laragon et XAMPP sont trouvés automatiquement). Composer est téléchargé tout seul s'il n'est pas installé.
 
 1. Récupérer le projet (ZIP GitHub → clic droit → Extraire tout, ou `git clone`).
-2. Double-cliquer sur **`installer.bat`** (une seule fois, avec internet).
-3. Double-cliquer sur **`demarrer.bat`** : le site s'ouvre sur `http://127.0.0.1:8200` et la fenêtre affiche
-   l'adresse à taper dans les téléphones, par exemple `192.168.1.20:8200`. **Laisser cette fenêtre ouverte.**
-4. Au premier lancement, Windows demande d'autoriser PHP : cocher **Réseaux privés** et autoriser.
-5. Nouvelle version : **`mettre-a-jour.bat`**, puis `demarrer.bat`. Linux / Mac : `./installer.sh` puis `./demarrer.sh`.
+2. Double-cliquer sur **`installer.bat`** (une seule fois, avec internet), puis sur **`demarrer.bat`**.
+3. Nouvelle version : **`mettre-a-jour.bat`**, puis `demarrer.bat`. Linux / Mac : `./installer.sh` puis `./demarrer.sh`.
 
 Le port **8200** diffère de celui des autres gestions (8000 scolaire, 8100 commerce) : elles peuvent tourner ensemble.
 Si l'installation échoue, `installer.bat` explique le problème et l'écrit dans `installation.log`.
@@ -109,8 +117,8 @@ Règles contrôlées partout (site, application, synchronisation) :
 
 ## Télécharger les applications
 
-Onglet **Releases** du dépôt GitHub → dernière version → `GestionParoissiale.apk` (téléphone) ou
-`GestionParoissiale-Installation-….exe` (Windows).
+Onglet **Releases** du dépôt GitHub → dernière version → `GestionParoissiale.apk` (téléphone),
+`GestionParoissiale-Installation-….exe` (application Windows) et `GestionParoissiale-Serveur-….zip` (le serveur, voir plus haut).
 Au premier lancement : adresse du serveur (affichée par `demarrer.bat`), e-mail et mot de passe. Ensuite l'application fonctionne **sans internet**.
 
 ### Comment marche la synchronisation

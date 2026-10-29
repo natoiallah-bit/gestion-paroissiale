@@ -1,6 +1,7 @@
 name: Applications Android et Windows
 
-# Fabrique l'application téléphone (.apk) et l'installateur Windows (.exe).
+# Fabrique l'application téléphone (.apk), l'installateur Windows (.exe) et le paquet SERVEUR
+# pour Windows (PHP et composants inclus : on décompresse, on lance demarrer.bat).
 # Les fichiers sont publiés dans « Releases » sous le numéro de version de
 # application/package.json (v1.0.0…) : changer ce numéro crée une nouvelle version,
 # sinon la version existante est mise à jour.
@@ -9,7 +10,7 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-    paths: ['application/**', '.github/workflows/applications.yml']
+    paths-ignore: ['**.md']
   workflow_dispatch:
 
 permissions:
@@ -86,8 +87,87 @@ jobs:
           name: windows
           path: application/dist-electron/*.exe
 
+  serveur:
+    needs: tests
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, sqlite3, mbstring, openssl, fileinfo, curl
+          tools: composer
+          coverage: none
+      - name: Composants du serveur (sans les outils de développement)
+        run: composer install --no-interaction --no-dev --optimize-autoloader --no-progress
+      - name: PHP pour Windows (livré dans le paquet, rien à installer)
+        shell: pwsh
+        run: |
+          $releases = Invoke-RestMethod 'https://windows.php.net/downloads/releases/releases.json'
+          $fichier = $releases.'8.3'.'nts-vs16-x64'.zip.path
+          Write-Host "PHP $($releases.'8.3'.version) : $fichier"
+          Invoke-WebRequest "https://windows.php.net/downloads/releases/$fichier" -OutFile php.zip
+          Expand-Archive php.zip -DestinationPath php
+      - name: Configurer PHP (extensions utilisées par l'application)
+        run: |
+          cd php
+          cp php.ini-production php.ini
+          sed -i 's/^;extension_dir = "ext"\r\?$/extension_dir = "ext"/' php.ini
+          for e in curl fileinfo mbstring openssl pdo_sqlite sqlite3; do
+            sed -i "s/^;extension=$e\r\?\$/extension=$e/" php.ini
+          done
+          grep -E '^(extension_dir|extension=)' php.ini
+      - name: Assembler le paquet
+        run: |
+          VERSION=$(node -p "require('./application/package.json').version")
+          DOSSIER="pack/GestionParoissiale-Serveur"
+          mkdir -p "$DOSSIER"
+          # Le projet (sans les applications, les tests ni la configuration GitHub), puis PHP et les composants
+          git ls-files | grep -v -e '^application/' -e '^\.github/' -e '^tests/' -e '^\.gitattributes$' | tar -cf - -T - | tar -xf - -C "$DOSSIER"
+          cp -r vendor php "$DOSSIER/"
+          rm -f "$DOSSIER"/bootstrap/cache/*.php
+          mkdir -p "$DOSSIER/database"
+          cat > "$DOSSIER/LISEZMOI.txt" <<'TEXTE'
+          SERVEUR - Gestion du vicariat
+
+          1. Faites un clic droit sur ce dossier compresse > "Extraire tout" (ne lancez rien depuis l'apercu du ZIP).
+          2. Double-cliquez sur  demarrer.bat
+             (la premiere fois, la base de donnees et le compte administrateur sont crees tout seuls).
+          3. Le site s'ouvre sur http://127.0.0.1:8200 ; la fenetre affiche aussi l'adresse a taper dans les
+             telephones, par exemple 192.168.1.20:8200. LAISSEZ CETTE FENETRE OUVERTE pendant que le secteur travaille.
+          4. Si Windows demande l'autorisation pour PHP : cochez "Reseaux prives" puis Autoriser.
+
+          Compte administrateur : admin@vicariat.local / changer-ce-mot-de-passe  (a changer apres la premiere connexion).
+
+          Sauvegarde : copiez regulierement le fichier  database\database.sqlite  sur une cle USB.
+          Aucune installation de PHP n'est necessaire : il est fourni dans le dossier php.
+          TEXTE
+          sed -i 's/^          //' "$DOSSIER/LISEZMOI.txt"
+          (cd pack && 7z a -tzip -mx=5 "../GestionParoissiale-Serveur-$VERSION.zip" GestionParoissiale-Serveur > /dev/null)
+          ls -la GestionParoissiale-Serveur-*.zip
+      - name: Essai de démarrage du paquet, tel qu'un utilisateur le recevra
+        run: |
+          mkdir essai && cd essai
+          7z x ../GestionParoissiale-Serveur-*.zip > /dev/null
+          cd GestionParoissiale-Serveur
+          ./php/php.exe -v
+          ./php/php.exe outils/installer.php
+          ./php/php.exe artisan serve --port=8200 &
+          SERVEUR=$!
+          sleep 6
+          curl -sf http://127.0.0.1:8200/api/ping
+          curl -sf -o /dev/null -w "page de connexion : %{http_code}\n" http://127.0.0.1:8200/login
+          kill $SERVEUR || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: serveur
+          path: GestionParoissiale-Serveur-*.zip
+
   publication:
-    needs: [android, windows]
+    needs: [android, windows, serveur]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -110,4 +190,8 @@ jobs:
 
             **Ordinateur Windows** : téléchargez `GestionParoissiale-Installation-….exe` et lancez-le.
 
-            Au premier lancement, indiquez l'adresse de votre serveur, votre e-mail et votre mot de passe.
+            **Serveur (à installer une seule fois, sur l'ordinateur du vicariat)** : téléchargez
+            `GestionParoissiale-Serveur-….zip`, faites clic droit > « Extraire tout », puis double-cliquez sur
+            `demarrer.bat`. PHP est inclus, rien d'autre à installer. La fenêtre affiche l'adresse du serveur.
+
+            Au premier lancement des applications, indiquez l'adresse du serveur, votre e-mail et votre mot de passe.

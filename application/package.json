@@ -1,7 +1,7 @@
 {
   "name": "gestion-paroissiale-app",
   "productName": "Gestion Paroissiale",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Application de caisse hors ligne, synchronisée avec le serveur Gestion paroissiale",
   "private": true,
   "type": "module",

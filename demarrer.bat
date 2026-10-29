@@ -4,6 +4,8 @@ title Gestion Paroissiale - serveur (laisser ouvert)
 call "%~dp0outils\trouver-php.bat"
 if not defined PHP (echo PHP est introuvable sur cet ordinateur. & pause & exit /b 1)
 if not exist vendor\autoload.php (echo Lancez d'abord installer.bat & pause & exit /b 1)
+rem Premier lancement du paquet serveur : cree la configuration et la base de donnees
+if not exist .env "%PHP%" outils\installer.php
 "%PHP%" artisan migrate --force
 "%PHP%" artisan vicariat:adresses --port=8200
 echo  Laissez cette fenetre ouverte pendant que le secteur travaille.

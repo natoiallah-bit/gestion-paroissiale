@@ -67,25 +67,31 @@ if (! is_file('composer.json') || ! is_file('artisan')) {
         .'    depuis le dossier extrait (pas depuis l\'apercu du ZIP).');
 }
 
-// 4. Composer : installé sur l'ordinateur, sinon téléchargé dans le dossier du projet
+
+// 4. Composants : le paquet serveur de la Release contient déjà PHP et les composants (dossier php\) ;
+// sinon Composer, installé sur l'ordinateur ou téléchargé dans le dossier du projet.
 dire('[3/6] Installation des composants (quelques minutes la premiere fois)...');
-$sortie = [];
-exec((PHP_OS_FAMILY === 'Windows' ? 'where composer' : 'command -v composer').' 2>&1', $sortie, $code);
-if ($code === 0) {
-    $composer = 'composer';
+if (is_file('php/php.exe') && is_file('vendor/autoload.php')) {
+    dire('    Composants deja inclus dans ce paquet : rien a telecharger.');
 } else {
-    if (! is_file('composer.phar')) {
-        dire('    Composer absent : telechargement de composer.phar...');
-        if (! @copy('https://getcomposer.org/download/latest-stable/composer.phar', 'composer.phar')) {
-            echec("impossible de telecharger Composer (internet necessaire pour l'installation).\n"
-                .'    Installez Composer depuis https://getcomposer.org/download/ puis relancez.');
+    $sortie = [];
+    exec((PHP_OS_FAMILY === 'Windows' ? 'where composer' : 'command -v composer').' 2>&1', $sortie, $code);
+    if ($code === 0) {
+        $composer = 'composer';
+    } else {
+        if (! is_file('composer.phar')) {
+            dire('    Composer absent : telechargement de composer.phar...');
+            if (! @copy('https://getcomposer.org/download/latest-stable/composer.phar', 'composer.phar')) {
+                echec("impossible de telecharger Composer (internet necessaire pour l'installation).\n"
+                    .'    Installez Composer depuis https://getcomposer.org/download/ puis relancez.');
+            }
         }
+        $composer = $php.' composer.phar';
     }
-    $composer = $php.' composer.phar';
-}
-if (! lancer($composer.' install --no-interaction --no-dev --optimize-autoloader')) {
-    echec("l'installation des composants a echoue (voir le message juste au-dessus).\n"
-        .'    Verifiez la connexion internet, puis relancez installer.bat');
+    if (! lancer($composer.' install --no-interaction --no-dev --optimize-autoloader')) {
+        echec("l'installation des composants a echoue (voir le message juste au-dessus).\n"
+            .'    Verifiez la connexion internet, puis relancez installer.bat');
+    }
 }
 
 // 5. Configuration
