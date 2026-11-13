@@ -23,8 +23,8 @@ jobs:
       run:
         working-directory: application
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -42,13 +42,13 @@ jobs:
       run:
         working-directory: application
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: application/package-lock.json
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
@@ -62,7 +62,7 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
           cp app/build/outputs/apk/debug/app-debug.apk ../GestionParoissiale.apk
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: android
           path: application/GestionParoissiale.apk
@@ -74,15 +74,15 @@ jobs:
       run:
         working-directory: application
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: application/package-lock.json
       - run: npm ci
       - run: npm run exe
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows
           path: application/dist-electron/*.exe
@@ -94,7 +94,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -161,7 +161,7 @@ jobs:
           curl -sf http://127.0.0.1:8200/api/ping
           curl -sf -o /dev/null -w "page de connexion : %{http_code}\n" http://127.0.0.1:8200/login
           kill $SERVEUR || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: serveur
           path: GestionParoissiale-Serveur-*.zip
@@ -170,14 +170,14 @@ jobs:
     needs: [android, windows, serveur]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: version
         run: echo "tag=v$(node -p "require('./application/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: fichiers
           merge-multiple: true
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Gestion Paroissiale ${{ steps.version.outputs.tag }}
